@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="bestfps — Minecraft FPS 优化客户端，帧率提升最高 1000%+" />
+  <meta name="keywords" content="Minecraft, FPS优化, 光影, 帧率, 客户端, shader, 性能, 游戏优化" />
+  <meta name="author" content="bestfps" />
+  <meta name="theme-color" content="#0071e3" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bestfps.example.com/" />
+  <meta property="og:title" content="bestfps — Minecraft FPS 优化客户端" />
+  <meta property="og:description" content="帧率提升最高 1000%+. 支持光影预设、多平台下载、配置同步，让你的 Minecraft 跑得更流畅。" />
+  <meta property="og:image" content="https://bestfps.example.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:site_name" content="bestfps" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="bestfps — Minecraft FPS 优化客户端" />
+  <meta name="twitter:description" content="帧率提升最高 1000%+. 支持光影预设、多平台下载、配置同步，让你的 Minecraft 跑得更流畅。" />
+  <meta name="twitter:image" content="https://bestfps.example.com/og-image.png" />
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://bestfps.example.com/" />
+
+  <title>bestfps — Minecraft FPS 优化客户端</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/themes.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/css/landing.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <script>
+    const saved = localStorage.getItem('theme') || 'system';
+    if (saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+</head>
+<body>
+
+  <!-- ========== Navigation ========== -->
+  <header class="navbar" id="nav">
+    <a href="/" class="nav-brand">bestfps</a>
+    <button class="nav-mobile-toggle" id="nav-burger" aria-label="打开菜单">☰</button>
+    <nav class="nav-links" id="nav-links">
+      <a href="#features" class="nav__link">特性</a>
+      <a href="#comparison" class="nav__link">对比</a>
+      <a href="#testimonials" class="nav__link">用户评价</a>
+      <a href="/pricing" class="nav__link">定价</a>
+      <a href="https://discord.gg/bestfps" class="nav-discord" target="_blank" rel="noopener">Discord</a>
+      <div class="nav-actions">
+        <a href="/login" class="nav__link" id="nav-login">登录</a>
+        <a href="/dashboard" class="nav__link nav__link--cta" id="nav-dashboard" style="display:none;">控制面板</a>
+        <a href="#" class="nav__link" id="nav-logout" style="display:none; color:var(--error);" onclick="logout(); return false;">退出</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ========== Hero ========== -->
+  <section class="hero" id="hero">
+    <div class="hero__content container">
+      <div class="hero__badge">
+        <span class="hero__badge-dot"></span>
+        v3.0 现已发布 — 帧率再提升 40%
+      </div>
+      <h1 class="hero__title">
+        <span class="accent">bestfps</span>
+      </h1>
+      <p class="hero__subtitle">Minecraft FPS 优化客户端 &middot; 帧率提升 1000%+</p>
+      <div class="hero__actions" id="hero-actions">
+        <a href="#download" class="btn btn-primary btn-lg">免费下载</a>
+        <a href="#features" class="btn btn-ghost btn-lg">了解更多</a>
+      </div>
+      <div class="hero__stats">
+        <div class="hero__stat">
+          <strong>1000%+</strong>
+          <span>帧率提升</span>
+        </div>
+        <div class="hero__stat-divider"></div>
+        <div class="hero__stat">
+          <strong>50K+</strong>
+          <span>活跃玩家</span>
+        </div>
+        <div class="hero__stat-divider"></div>
+        <div class="hero__stat">
+          <strong>4.9</strong>
+          <span>用户评分</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Features ========== -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header" style="text-align:center; margin-bottom:56px;">
+        <p class="section-label">核心优势</p>
+        <h2 class="section-title">六大优化，打造极致帧率</h2>
+      </div>
+      <div class="features__grid">
+
+        <div class="feature-card fade-in-up">
+          <div class="feature-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <h3 class="feature-card__title">渲染引擎重构</h3>
+          <p class="feature-card__desc">重写 Minecraft 渲染管线，CPU/GPU 协同优化，帧率翻倍提升。</p>
+        </div>
+
+        <div class="feature-card fade-in-up">
+          <div class="feature-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <h3 class="feature-card__title">内存智能管理</h3>
+          <p class="feature-card__desc">动态回收泄漏内存，精准 GC 时机，彻底告别卡顿瞬间。</p>
+        </div>
+
+        <div class="feature-card fade-in-up">
+          <div class="feature-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18M9 21V9"/>
+            </svg>
+          </div>
+          <h3 class="feature-card__title">区块预加载</h3>
+          <p class="feature-card__desc">预测性加载周围区块，无缝切换视角，0 卡顿畅快探索。</p>
+        </div>
+
+        <div class="feature-card fade-in-up">
+          <div class="feature-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+            </svg>
+          </div>
+          <h3 class="feature-card__title">着色器优化</h3>
+          <p class="feature-card__desc">自动跳过不可见面片渲染，节省高达 40% GPU 开销。</p>
+        </div>
+
+        <div class="feature-card fade-in-up">
+          <div class="feature-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <h3 class="feature-card__title">帧率稳定</h3>
+          <p class="feature-card__desc">消除偶发掉帧，平均帧率提升 1000%+，游戏体验丝滑如绸。</p>
+        </div>
+
+        <div class="feature-card fade-in-up">
+          <div class="feature-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </div>
+          <h3 class="feature-card__title">多版本兼容</h3>
+          <p class="feature-card__desc">支持 Minecraft 所有版本，从 1.8 到最新版，一个客户端全搞定。</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Comparison ========== -->
+  <section class="comparison" id="comparison">
+    <div class="container">
+      <div class="section-header" style="text-align:center; margin-bottom:56px;">
+        <p class="section-label">数据对比</p>
+        <h2 class="section-title">为什么选择 bestfps</h2>
+      </div>
+      <div class="comparison__table-wrap">
+        <table class="comparison__table">
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th class="comparison__highlight">bestfps</th>
+              <th>其他优化客户端</th>
+              <th>原版 Minecraft</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>FPS 提升</td>
+              <td class="comparison__highlight"><strong>1000%+</strong></td>
+              <td>~80%</td>
+              <td class="comparison__muted">基准</td>
+            </tr>
+            <tr>
+              <td>输入延迟</td>
+              <td class="comparison__highlight">极低</td>
+              <td>低</td>
+              <td class="comparison__muted">标准</td>
+            </tr>
+            <tr>
+              <td>内存占用</td>
+              <td class="comparison__highlight">智能优化</td>
+              <td>一般</td>
+              <td class="comparison__muted">高</td>
+            </tr>
+            <tr>
+              <td>配置难度</td>
+              <td class="comparison__highlight">开箱即用</td>
+              <td>需手动调优</td>
+              <td class="comparison__muted">需专业知识</td>
+            </tr>
+            <tr>
+              <td>版本兼容</td>
+              <td class="comparison__highlight">所有版本</td>
+              <td>部分版本</td>
+              <td class="comparison__muted">基准</td>
+            </tr>
+            <tr>
+              <td>易用性</td>
+              <td class="comparison__highlight">
+                <svg viewBox="0 0 90 16" fill="var(--warning)" width="72" height="14" aria-hidden="true">
+                  <path d="M8 0l2.47 5 5.53.8-4 3.9.94 5.5L8 13.3l-4.94 2.6L4 9.7 0 5.8l5.53-.8L8 0z"/>
+                  <path d="M26 0l2.47 5 5.53.8-4 3.9.94 5.5L26 13.3l-4.94 2.6L22 9.7 18 5.8l5.53-.8L26 0z"/>
+                  <path d="M44 0l2.47 5 5.53.8-4 3.9.94 5.5L44 13.3l-4.94 2.6L40 9.7 36 5.8l5.53-.8L44 0z"/>
+                  <path d="M62 0l2.47 5 5.53.8-4 3.9.94 5.5L62 13.3l-4.94 2.6L58 9.7 54 5.8l5.53-.8L62 0z"/>
+                  <path d="M80 0l2.47 5 5.53.8-4 3.9.94 5.5L80 13.3l-4.94 2.6L76 9.7 72 5.8l5.53-.8L80 0z"/>
+                </svg>
+              </td>
+              <td>
+                <svg viewBox="0 0 90 16" width="72" height="14" aria-hidden="true">
+                  <path d="M8 0l2.47 5 5.53.8-4 3.9.94 5.5L8 13.3l-4.94 2.6L4 9.7 0 5.8l5.53-.8L8 0z" fill="var(--warning)"/>
+                  <path d="M26 0l2.47 5 5.53.8-4 3.9.94 5.5L26 13.3l-4.94 2.6L22 9.7 18 5.8l5.53-.8L26 0z" fill="var(--warning)"/>
+                  <path d="M44 0l2.47 5 5.53.8-4 3.9.94 5.5L44 13.3l-4.94 2.6L40 9.7 36 5.8l5.53-.8L44 0z" fill="var(--warning)"/>
+                  <path d="M62 0l2.47 5 5.53.8-4 3.9.94 5.5L62 13.3l-4.94 2.6L58 9.7 54 5.8l5.53-.8L62 0z" fill="var(--border)"/>
+                  <path d="M80 0l2.47 5 5.53.8-4 3.9.94 5.5L80 13.3l-4.94 2.6L76 9.7 72 5.8l5.53-.8L80 0z" fill="var(--border)"/>
+                </svg>
+              </td>
+              <td class="comparison__muted">
+                <svg viewBox="0 0 90 16" width="72" height="14" aria-hidden="true">
+                  <path d="M8 0l2.47 5 5.53.8-4 3.9.94 5.5L8 13.3l-4.94 2.6L4 9.7 0 5.8l5.53-.8L8 0z" fill="var(--warning)"/>
+                  <path d="M26 0l2.47 5 5.53.8-4 3.9.94 5.5L26 13.3l-4.94 2.6L22 9.7 18 5.8l5.53-.8L26 0z" fill="var(--warning)"/>
+                  <path d="M44 0l2.47 5 5.53.8-4 3.9.94 5.5L44 13.3l-4.94 2.6L40 9.7 36 5.8l5.53-.8L44 0z" fill="var(--border)"/>
+                  <path d="M62 0l2.47 5 5.53.8-4 3.9.94 5.5L62 13.3l-4.94 2.6L58 9.7 54 5.8l5.53-.8L62 0z" fill="var(--border)"/>
+                  <path d="M80 0l2.47 5 5.53.8-4 3.9.94 5.5L80 13.3l-4.94 2.6L76 9.7 72 5.8l5.53-.8L80 0z" fill="var(--border)"/>
+                </svg>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Testimonials ========== -->
+  <section class="testimonials" id="testimonials">
+    <div class="container">
+      <div class="section-header" style="text-align:center; margin-bottom:56px;">
+        <p class="section-label">用户评价</p>
+        <h2 class="section-title">来自社区的真实反馈</h2>
+      </div>
+      <div class="testimonials__grid">
+
+        <div class="testimonial-card fade-in-up">
+          <div class="testimonial-card__stars">
+            <svg viewBox="0 0 90 16" fill="var(--warning)" width="80" height="16" aria-hidden="true">
+              <path d="M8 0l2.47 5 5.53.8-4 3.9.94 5.5L8 13.3l-4.94 2.6L4 9.7 0 5.8l5.53-.8L8 0z"/>
+              <path d="M26 0l2.47 5 5.53.8-4 3.9.94 5.5L26 13.3l-4.94 2.6L22 9.7 18 5.8l5.53-.8L26 0z"/>
+              <path d="M44 0l2.47 5 5.53.8-4 3.9.94 5.5L44 13.3l-4.94 2.6L40 9.7 36 5.8l5.53-.8L44 0z"/>
+              <path d="M62 0l2.47 5 5.53.8-4 3.9.94 5.5L62 13.3l-4.94 2.6L58 9.7 54 5.8l5.53-.8L62 0z"/>
+              <path d="M80 0l2.47 5 5.53.8-4 3.9.94 5.5L80 13.3l-4.94 2.6L76 9.7 72 5.8l5.53-.8L80 0z"/>
+            </svg>
+          </div>
+          <blockquote class="testimonial-card__quote">
+            "从原来 30 帧直接跳到 120+ 帧，告别了玩了三年 Minecraft 以来一直困扰我的卡顿问题。服务器里的人都问我怎么做到的。"
+          </blockquote>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar" style="background: linear-gradient(135deg, #667eea, #764ba2);">张</div>
+            <div>
+              <strong>张三丰</strong>
+              <span>PVP 服务器玩家 · 4年MC经验</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in-up">
+          <div class="testimonial-card__stars">
+            <svg viewBox="0 0 90 16" fill="var(--warning)" width="80" height="16" aria-hidden="true">
+              <path d="M8 0l2.47 5 5.53.8-4 3.9.94 5.5L8 13.3l-4.94 2.6L4 9.7 0 5.8l5.53-.8L8 0z"/>
+              <path d="M26 0l2.47 5 5.53.8-4 3.9.94 5.5L26 13.3l-4.94 2.6L22 9.7 18 5.8l5.53-.8L26 0z"/>
+              <path d="M44 0l2.47 5 5.53.8-4 3.9.94 5.5L44 13.3l-4.94 2.6L40 9.7 36 5.8l5.53-.8L44 0z"/>
+              <path d="M62 0l2.47 5 5.53.8-4 3.9.94 5.5L62 13.3l-4.94 2.6L58 9.7 54 5.8l5.53-.8L62 0z"/>
+              <path d="M80 0l2.47 5 5.53.8-4 3.9.94 5.5L80 13.3l-4.94 2.6L76 9.7 72 5.8l5.53-.8L80 0z"/>
+            </svg>
+          </div>
+          <blockquote class="testimonial-card__quote">
+            "配置同步功能太赞了，在电脑上设置好，换到另一台电脑登录就自动同步光影配置，不用重新折腾。预设管理也很好用。"
+          </blockquote>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar" style="background: linear-gradient(135deg, #f093fb, #f5576c);">李</div>
+            <div>
+              <strong>李四</strong>
+              <span>建筑爱好者 · 多设备用户</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card fade-in-up">
+          <div class="testimonial-card__stars">
+            <svg viewBox="0 0 90 16" fill="var(--warning)" width="80" height="16" aria-hidden="true">
+              <path d="M8 0l2.47 5 5.53.8-4 3.9.94 5.5L8 13.3l-4.94 2.6L4 9.7 0 5.8l5.53-.8L8 0z"/>
+              <path d="M26 0l2.47 5 5.53.8-4 3.9.94 5.5L26 13.3l-4.94 2.6L22 9.7 18 5.8l5.53-.8L26 0z"/>
+              <path d="M44 0l2.47 5 5.53.8-4 3.9.94 5.5L44 13.3l-4.94 2.6L40 9.7 36 5.8l5.53-.8L44 0z"/>
+              <path d="M62 0l2.47 5 5.53.8-4 3.9.94 5.5L62 13.3l-4.94 2.6L58 9.7 54 5.8l5.53-.8L62 0z"/>
+              <path d="M80 0l2.47 5 5.53.8-4 3.9.94 5.5L80 13.3l-4.94 2.6L76 9.7 72 5.8l5.53-.8L80 0z"/>
+            </svg>
+          </div>
+          <blockquote class="testimonial-card__quote">
+            "作为一个做光影包作者，bestfps 的着色器兼容性让我惊艳。很多在其他客户端有问题的光影在 bestfps 上完美运行。"
+          </blockquote>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">王</div>
+            <div>
+              <strong>王五</strong>
+              <span>光影包作者 · Shader 开发者</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FAQ ========== -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="section-header" style="text-align:center; margin-bottom:56px;">
+        <p class="section-label">常见问题</p>
+        <h2 class="section-title">有疑问？我们有答案</h2>
+      </div>
+      <div class="faq__list">
+
+        <div class="faq__item">
+          <button class="faq__question" aria-expanded="false">
+            <span>bestfps 安全吗？会被封号吗？</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer">
+            <p>bestfps 仅修改本地渲染参数，不修改游戏核心逻辑或注入任何网络数据包。它符合 Mojang 的客户端修改准则，大多数服务器将其视为与其他光影 mod 同等级的合法客户端。但我们建议在加入任何服务器前先查阅该服务器的规定。</p>
+          </div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question" aria-expanded="false">
+            <span>支持哪些 Minecraft 版本？</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer">
+            <p>bestfps 支持 Minecraft 1.8 到最新正式版的所有版本。每个版本都有对应的客户端下载，我们会持续跟进 Minecraft 更新。</p>
+          </div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question" aria-expanded="false">
+            <span>配置会自动同步吗？</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer">
+            <p>是的，注册账号后，你的所有光影设置、资源包配置和预设都会自动云同步。在任何设备登录都能访问完全相同的配置。</p>
+          </div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question" aria-expanded="false">
+            <span>占用多少系统资源？</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer">
+            <p>bestfps 的客户端本体几乎不占用额外资源（小于 10MB 内存）。所有优化都在 Minecraft 进程内通过渲染管线重构实现，不会增加额外的后台进程。</p>
+          </div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question" aria-expanded="false">
+            <span>是否支持 macOS 和 Linux？</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer">
+            <p>支持！bestfps 提供 Windows、macOS 和 Linux 原生客户端，所有平台功能一致，配置云同步。</p>
+          </div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question" aria-expanded="false">
+            <span>如何分享我的配置给朋友？</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer">
+            <p>在控制面板中点击「生成分享链接」，即可一键分享你的光影和资源包配置给你的好友。他们只需要点击链接即可查看并一键导入到自己的账户。</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Changelog ========== -->
+  <section class="changelog" id="changelog">
+    <div class="container">
+      <div class="section-header" style="text-align:center; margin-bottom:56px;">
+        <p class="section-label">更新日志</p>
+        <h2 class="section-title">持续进化的最佳 FPS 优化方案</h2>
+      </div>
+      <div class="changelog__timeline">
+
+        <div class="changelog__item fade-in-up">
+          <div class="changelog__dot"></div>
+          <div class="changelog__content">
+            <div class="changelog__meta">
+              <span class="changelog__badge changelog__badge--feature">新功能</span>
+              <time class="changelog__date">2026 年 4 月</time>
+            </div>
+            <h3 class="changelog__title">v3.0 — 全面升级</h3>
+            <ul class="changelog__list">
+              <li>新增云端预设管理系统，支持命名保存多套配置</li>
+              <li>新增一键生成分享链接功能，轻松分享配置</li>
+              <li>全新控制面板 UI，支持暗黑模式</li>
+              <li>新增公告系统，随时了解最新动态</li>
+              <li>登录历史和会话管理，保护账号安全</li>
+              <li>帧率优化再提升 40%，支持最新 Minecraft 版本</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="changelog__item fade-in-up">
+          <div class="changelog__dot"></div>
+          <div class="changelog__content">
+            <div class="changelog__meta">
+              <span class="changelog__badge changelog__badge--improve">改进</span>
+              <time class="changelog__date">2026 年 2 月</time>
+            </div>
+            <h3 class="changelog__title">v2.5 — 同步与兼容性</h3>
+            <ul class="changelog__list">
+              <li>新增多设备配置云同步</li>
+              <li>兼容 Minecraft 1.21 全部新特性</li>
+              <li>优化内存管理，降低 30% 内存占用</li>
+              <li>新增 OptiFine 光影包兼容模式</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="changelog__item fade-in-up">
+          <div class="changelog__dot"></div>
+          <div class="changelog__content">
+            <div class="changelog__meta">
+              <span class="changelog__badge changelog__badge--fix">修复</span>
+              <time class="changelog__date">2025 年 12 月</time>
+            </div>
+            <h3 class="changelog__title">v2.4 — 稳定更新</h3>
+            <ul class="changelog__list">
+              <li>修复部分服务器反作弊误报问题</li>
+              <li>修复 AMD 显卡驱动兼容性问题</li>
+              <li>修复着色器在特定场景下闪烁的问题</li>
+              <li>优化启动速度，减少 2 秒等待时间</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="changelog__item fade-in-up">
+          <div class="changelog__dot"></div>
+          <div class="changelog__content">
+            <div class="changelog__meta">
+              <span class="changelog__badge changelog__badge--feature">新功能</span>
+              <time class="changelog__date">2025 年 9 月</time>
+            </div>
+            <h3 class="changelog__title">v2.0 — 重大版本</h3>
+            <ul class="changelog__list">
+              <li>完全重写渲染引擎</li>
+              <li>新增智能帧率稳定算法</li>
+              <li>支持第三方光影包自动优化</li>
+              <li>全新用户界面</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Screenshots ========== -->
+  <section class="screenshots" id="screenshots">
+    <div class="container">
+      <p class="section-label">实机截图</p>
+      <h2 class="section-title">亲眼见证流畅体验</h2>
+      <div class="screenshots__gallery">
+        <button class="screenshots__arrow screenshots__arrow--prev" id="gallery-prev" aria-label="上一张">&#8249;</button>
+        <div class="screenshots__track" id="gallery-track">
+          <img class="screenshots__img" src="https://placehold.co/800x450/1d1d1f/ffffff?text=Minecraft+FPS+Demo+1" alt="bestfps 实机截图 1" />
+          <img class="screenshots__img" src="https://placehold.co/800x450/1d1d1f/ffffff?text=Minecraft+FPS+Demo+2" alt="bestfps 实机截图 2" />
+          <img class="screenshots__img" src="https://placehold.co/800x450/1d1d1f/ffffff?text=Minecraft+FPS+Demo+3" alt="bestfps 实机截图 3" />
+          <img class="screenshots__img" src="https://placehold.co/800x450/1d1d1f/ffffff?text=Minecraft+FPS+Demo+4" alt="bestfps 实机截图 4" />
+        </div>
+        <button class="screenshots__arrow screenshots__arrow--next" id="gallery-next" aria-label="下一张">&#8250;</button>
+      </div>
+      <div class="screenshots__dots" id="gallery-dots"></div>
+    </div>
+  </section>
+
+  <!-- ========== Download ========== -->
+  <section class="download" id="download">
+    <div class="container">
+      <h2 class="download__title">立即体验 bestfps</h2>
+      <p class="download__subtitle">兼容 Minecraft 所有版本 &middot; 支持 Windows / macOS / Linux</p>
+      <a href="#" class="btn btn-primary btn-lg" id="download-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        下载 bestfps
+      </a>
+      <div class="download__versions">
+        <span class="download__badge">Minecraft 1.8+</span>
+        <span class="download__badge">Minecraft 1.12+</span>
+        <span class="download__badge">Minecraft 1.18+</span>
+        <span class="download__badge">Minecraft 1.20+</span>
+        <span class="download__badge">Minecraft 最新版</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Footer ========== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__brand footer-brand">
+        <span class="footer__logo">bestfps</span>
+        <p>Minecraft FPS 优化客户端，让每一帧都流畅如丝。</p>
+        <div class="footer__social footer-social">
+          <a href="https://discord.gg/bestfps" target="_blank" rel="noopener" aria-label="Discord">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          </a>
+          <a href="https://twitter.com/bestfps" target="_blank" rel="noopener" aria-label="Twitter">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="https://github.com/bestfps" target="_blank" rel="noopener" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>产品</h4>
+          <a href="#features">功能特性</a>
+          <a href="/pricing">定价方案</a>
+          <a href="#download">免费下载</a>
+          <a href="#changelog">更新日志</a>
+        </div>
+        <div class="footer-col">
+          <h4>社区</h4>
+          <a href="https://discord.gg/bestfps" target="_blank" rel="noopener">Discord</a>
+          <a href="https://github.com/bestfps" target="_blank" rel="noopener">GitHub</a>
+          <a href="#testimonials">用户评价</a>
+          <a href="#faq">常见问题</a>
+        </div>
+        <div class="footer-col">
+          <h4>账号</h4>
+          <a href="/register">立即注册</a>
+          <a href="/login">账号登录</a>
+          <a href="/dashboard">控制面板</a>
+          <a href="/forgot-password">找回密码</a>
+        </div>
+        <div class="footer-col">
+          <h4>法律</h4>
+          <a href="/terms">服务条款</a>
+          <a href="/privacy">隐私政策</a>
+          <a href="#">退款政策</a>
+          <a href="#">联系方式</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 bestfps. All rights reserved.</p>
+        <p>本产品与 Mojang 或 Microsoft 无关联。Minecraft 版权归 Mojang Studios 所有。</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ---- Auth state ----
+    function updateNavAuth() {
+      const token = localStorage.getItem('token');
+      const loginEl = document.getElementById('nav-login');
+      const dashboardEl = document.getElementById('nav-dashboard');
+      const logoutEl = document.getElementById('nav-logout');
+      if (token) {
+        loginEl.style.display = 'none';
+        dashboardEl.style.display = 'inline-flex';
+        logoutEl.style.display = 'inline-flex';
+      }
+    }
+    updateNavAuth();
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+
+    // ---- Theme ----
+    (function() {
+      const saved = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+
+    // ---- Mobile nav ----
+    const burger = document.getElementById('nav-burger');
+    const navLinks = document.getElementById('nav-links');
+    if (burger) {
+      burger.addEventListener('click', () => {
+        navLinks.classList.toggle('open');
+        burger.classList.toggle('open');
+      });
+    }
+
+    // ---- Scroll reveal ----
+    const revealEls = document.querySelectorAll('.fade-in-up, .reveal');
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    revealEls.forEach(el => revealObserver.observe(el));
+
+    // ---- FAQ accordion ----
+    document.querySelectorAll('.faq__question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const isOpen = btn.getAttribute('aria-expanded') === 'true';
+        document.querySelectorAll('.faq__question').forEach(b => {
+          b.setAttribute('aria-expanded', 'false');
+          b.closest('.faq__item').classList.remove('open');
+        });
+        if (!isOpen) {
+          btn.setAttribute('aria-expanded', 'true');
+          btn.closest('.faq__item').classList.add('open');
+        }
+      });
+    });
+
+    // ---- Gallery ----
+    const track = document.getElementById('gallery-track');
+    const dotsContainer = document.getElementById('gallery-dots');
+    const imgs = track ? track.querySelectorAll('img') : [];
+    let current = 0;
+
+    function buildDots() {
+      if (!dotsContainer) return;
+      dotsContainer.innerHTML = '';
+      imgs.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'screenshots__dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('aria-label', `截图 ${i + 1}`);
+        dot.onclick = () => goTo(i);
+        dotsContainer.appendChild(dot);
+      });
+    }
+
+    function goTo(idx) {
+      current = ((idx % imgs.length) + imgs.length) % imgs.length;
+      track.style.transform = `translateX(-${current * 100}%)`;
+      dotsContainer.querySelectorAll('.screenshots__dot').forEach((d, i) => {
+        d.classList.toggle('active', i === current);
+      });
+    }
+
+    buildDots();
+    const prevBtn = document.getElementById('gallery-prev');
+    const nextBtn = document.getElementById('gallery-next');
+    if (prevBtn) prevBtn.onclick = () => goTo(current - 1);
+    if (nextBtn) nextBtn.onclick = () => goTo(current + 1);
+
+    // Auto-advance gallery
+    setInterval(() => goTo(current + 1), 5000);
+  </script>
+</body>
+</html>

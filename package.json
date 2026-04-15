@@ -1,0 +1,51 @@
+{
+  "name": "bestfps-website",
+  "version": "1.0.0",
+  "description": "bestfps Minecraft FPS client official website with user authentication",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "node build/build.js",
+    "build:watch": "node build/build.js --watch",
+    "build:prod": "NODE_ENV=production node build/build.js",
+    "test": "NODE_ENV=test jest --testTimeout=10000 --forceExit",
+    "test:playwright": "npx playwright test",
+    "test:playwright:ui": "npx playwright test --ui",
+    "test:playwright:debug": "npx playwright test --debug"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [
+      "./tests/setup.js"
+    ],
+    "verbose": true
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.9.0",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.3.2",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "node-cache": "^5.1.2",
+    "nodemailer": "^6.9.8",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "better-sqlite3": "^12.9.0",
+    "esbuild": "^0.28.0",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  }
+}

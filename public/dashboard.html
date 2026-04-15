@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>控制面板 — bestfps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/build/bundle.css" />
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ========== Toast Container ========== -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ========== Top Nav ========== -->
+  <header class="dash-nav">
+    <div class="dash-nav__inner">
+      <a href="/" class="dash-nav__logo">bestfps</a>
+      <div class="dash-nav__right">
+        <div class="theme-switcher" id="theme-switcher">
+          <button class="theme-btn" data-theme="light" title="浅色模式">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
+          <button class="theme-btn" data-theme="dark" title="深色模式">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+        <button class="dash-nav__menu-btn" id="shortcuts-btn" onclick="openShortcutsModal()" title="键盘快捷键 (?)" aria-label="键盘快捷键">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+        </button>
+        <button class="dash-nav__menu-btn" id="sidebar-toggle" aria-label="切换菜单">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== Announcement Banner Area ========== -->
+  <div id="announcement-banners"></div>
+
+  <!-- ========== Main Layout ========== -->
+  <div class="dash-layout" id="dash-layout">
+
+    <!-- Sidebar -->
+    <aside class="dash-sidebar" id="dash-sidebar">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar-ring" id="avatar-ring" title="点击更换头像">
+          <img id="sidebar-avatar-img" src="" alt="" style="display:none;" />
+          <svg id="avatar-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </div>
+        <input type="file" id="avatar-input" accept=".jpg,.jpeg,.png,.gif,.webp" style="display:none;" />
+        <div class="sidebar-username" id="sidebar-username">—</div>
+        <div class="sidebar-email" id="sidebar-email">—</div>
+        <span id="verified-badge" class="sidebar-badge badge-unverified">未验证</span>
+      </div>
+
+      <div class="sidebar-search">
+        <input class="form-input sidebar-search__input" id="global-search" type="text" placeholder="搜索预设和分享..." oninput="handleGlobalSearch(this.value)" />
+        <div class="sidebar-search__results" id="global-search-results"></div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-nav__item active" data-section="home" onclick="showSection('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>首页概览</span>
+        </a>
+        <a class="sidebar-nav__item" data-section="shaders" onclick="showSection('shaders')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <span>光影设置</span>
+        </a>
+        <a class="sidebar-nav__item" data-section="resources" onclick="showSection('resources')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <span>资源包</span>
+        </a>
+        <a class="sidebar-nav__item" data-section="presets" onclick="showSection('presets')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          <span>预设管理</span>
+        </a>
+        <a class="sidebar-nav__item" data-section="share" onclick="showSection('share')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <span>配置分享</span>
+        </a>
+        <a class="sidebar-nav__item" data-section="downloads" onclick="showSection('downloads')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>下载历史</span>
+        </a>
+        <a class="sidebar-nav__item" data-section="versions" onclick="showSection('versions')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>版本历史</span>
+        </a>
+
+        <!-- Account submenu -->
+        <div class="sidebar-nav__group">
+          <button class="sidebar-nav__group-title" onclick="toggleAccountMenu()" aria-expanded="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <span>账号</span>
+            <svg class="sidebar-nav__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="sidebar-nav__submenu" id="account-submenu">
+            <a class="sidebar-nav__subitem" data-section="profile" onclick="showSection('profile')">个人资料</a>
+            <a class="sidebar-nav__subitem" data-section="password" onclick="showSection('password')">修改密码</a>
+            <a class="sidebar-nav__subitem" data-section="email" onclick="showSection('email')">修改邮箱</a>
+            <a class="sidebar-nav__subitem" data-section="login-history" onclick="showSection('login-history')">登录历史</a>
+            <a class="sidebar-nav__subitem" data-section="sessions" onclick="showSection('sessions')">会话管理</a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer" id="admin-nav-item" style="display:none;">
+        <a href="/admin" class="sidebar-nav__item" style="color: var(--accent);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>管理后台</span>
+        </a>
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="#" class="sidebar-nav__item" onclick="logout(); return false;" style="color: var(--error);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>退出登录</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="dash-content" id="dash-content">
+
+      <!-- ===== HOME ===== -->
+      <section class="dash-section active" id="section-home">
+        <div class="dash-welcome">
+          <div class="dash-welcome__text">
+            <h1 class="dash-welcome__title">欢迎回来，<span id="home-username">—</span></h1>
+            <p class="dash-welcome__sub">这里是 bestfps 控制面板，管理你的光影配置、预设和账号。</p>
+          </div>
+          <div class="dash-welcome__quick">
+            <button class="btn btn-secondary btn-sm" onclick="showSection('shaders')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
+              从服务器拉取
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="showSection('shaders')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+              同步到服务器
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-card">
+            <div class="stat-card__icon" style="background: rgba(0,113,227,0.10); color: var(--accent);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <div class="stat-card__body">
+              <strong class="stat-card__value" id="stat-downloads">—</strong>
+              <span class="stat-card__label">总下载次数</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon" style="background: rgba(52,199,89,0.10); color: #34c759;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="stat-card__body">
+              <strong class="stat-card__value" id="stat-presets">—</strong>
+              <span class="stat-card__label">保存的预设</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon" style="background: rgba(255,149,0,0.10); color: #ff9500;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div class="stat-card__body">
+              <strong class="stat-card__value" id="stat-days">—</strong>
+              <span class="stat-card__label">账户天数</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__icon" style="background: rgba(88,86,214,0.10); color: #5856d6;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </div>
+            <div class="stat-card__body">
+              <strong class="stat-card__value" id="stat-shares">—</strong>
+              <span class="stat-card__label">分享链接</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">下载趋势</h2>
+            <span class="dash-card__badge">最近 30 天</span>
+          </div>
+          <div class="chart-container" id="chart-container">
+            <div class="chart-skeleton" id="chart-skeleton" style="display:none; padding:20px;">
+              <div class="skeleton" style="width:100%;height:200px;border-radius:8px;"></div>
+            </div>
+            <canvas id="downloads-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Quick access -->
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">快捷操作</h2>
+          </div>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="showSection('presets')">
+              <div class="quick-action-btn__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <span>新建预设</span>
+            </button>
+            <button class="quick-action-btn" onclick="showSection('share')">
+              <div class="quick-action-btn__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </div>
+              <span>分享配置</span>
+            </button>
+            <button class="quick-action-btn" onclick="showSection('resources')">
+              <div class="quick-action-btn__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+              <span>添加资源包</span>
+            </button>
+            <button class="quick-action-btn" onclick="showSection('profile')">
+              <div class="quick-action-btn__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </div>
+              <span>完整设置</span>
+            </button>
+            <button class="quick-action-btn" onclick="exportConfig()">
+              <div class="quick-action-btn__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <span>导出配置</span>
+            </button>
+            <button class="quick-action-btn" onclick="document.getElementById('import-file-input').click()">
+              <div class="quick-action-btn__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <span>导入配置</span>
+            </button>
+            <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="importConfigFromFile(this)" />
+          </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">最近活动</h2>
+          </div>
+          <div class="activity-feed" id="activity-feed">
+            <div class="activity-feed__skeleton" id="activity-feed-skeleton">
+              <div class="activity-skeleton-item"><div class="skeleton" style="width:32px;height:32px;border-radius:8px;"></div><div style="flex:1;"><div class="skeleton" style="width:60%;height:14px;border-radius:4px;margin-bottom:4px;"></div><div class="skeleton" style="width:40%;height:12px;border-radius:4px;"></div></div></div>
+              <div class="activity-skeleton-item"><div class="skeleton" style="width:32px;height:32px;border-radius:8px;"></div><div style="flex:1;"><div class="skeleton" style="width:55%;height:14px;border-radius:4px;margin-bottom:4px;"></div><div class="skeleton" style="width:35%;height:12px;border-radius:4px;"></div></div></div>
+              <div class="activity-skeleton-item"><div class="skeleton" style="width:32px;height:32px;border-radius:8px;"></div><div style="flex:1;"><div class="skeleton" style="width:65%;height:14px;border-radius:4px;margin-bottom:4px;"></div><div class="skeleton" style="width:30%;height:12px;border-radius:4px;"></div></div></div>
+            </div>
+            <div class="activity-feed__list" id="activity-feed-list"></div>
+            <div class="activity-feed__empty" id="activity-feed-empty" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36" style="color:var(--text-tertiary)"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <p>暂无活动记录</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SHADERS ===== -->
+      <section class="dash-section" id="section-shaders">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">光影设置</h1>
+          <span class="dash-card__badge">渲染优化配置</span>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">渲染参数</h2>
+            <div class="sync-status">
+              <span class="sync-dot" id="sync-dot"></span>
+              <span id="sync-text">已同步</span>
+            </div>
+          </div>
+
+          <div class="shader-list" id="shader-list">
+            <div class="shader-item">
+              <div class="shader-item__info">
+                <span class="shader-item__name">动态光照</span>
+                <span class="shader-item__desc">根据时间自动调节光照强度</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="shader-dynamic-light" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="shader-item">
+              <div class="shader-item__info">
+                <span class="shader-item__name">平滑光照</span>
+                <span class="shader-item__desc">减少光照边缘锯齿</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="shader-smooth-light" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="shader-item">
+              <div class="shader-item__info">
+                <span class="shader-item__name">云彩渲染</span>
+                <span class="shader-item__desc">开启/关闭云层渲染</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="shader-clouds" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="shader-item">
+              <div class="shader-item__info">
+                <span class="shader-item__name">粒子效果</span>
+                <span class="shader-item__desc">调节粒子渲染数量</span>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="shader-particles" min="0" max="100" value="50" oninput="this.nextElementSibling.textContent = this.value + '%'" />
+                <span class="range-val">50%</span>
+              </div>
+            </div>
+            <div class="shader-item">
+              <div class="shader-item__info">
+                <span class="shader-item__name">渲染距离</span>
+                <span class="shader-item__desc">视野范围（单位：区块）</span>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="shader-view-distance" min="4" max="32" value="12" oninput="this.nextElementSibling.textContent = this.value + ' ch'" />
+                <span class="range-val">12 ch</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="shader-skeleton" id="shader-skeleton" style="display:none;">
+            <div class="shader-item"><div class="shader-item__info"><div class="skeleton" style="width:140px;height:14px;margin:4px 0;"></div><div class="skeleton" style="width:180px;height:12px;margin:2px 0 4px;"></div></div><div class="skeleton" style="width:44px;height:22px;border-radius:11px;"></div></div>
+            <div class="shader-item"><div class="shader-item__info"><div class="skeleton" style="width:120px;height:14px;margin:4px 0;"></div><div class="skeleton" style="width:160px;height:12px;margin:2px 0 4px;"></div></div><div class="skeleton" style="width:44px;height:22px;border-radius:11px;"></div></div>
+            <div class="shader-item"><div class="shader-item__info"><div class="skeleton" style="width:150px;height:14px;margin:4px 0;"></div><div class="skeleton" style="width:140px;height:12px;margin:2px 0 4px;"></div></div><div class="skeleton" style="width:44px;height:22px;border-radius:11px;"></div></div>
+            <div class="shader-item"><div class="shader-item__info"><div class="skeleton" style="width:130px;height:14px;margin:4px 0;"></div><div class="skeleton" style="width:200px;height:12px;margin:2px 0 4px;"></div></div><div class="skeleton" style="width:120px;height:6px;border-radius:3px;"></div></div>
+            <div class="shader-item"><div class="shader-item__info"><div class="skeleton" style="width:160px;height:14px;margin:4px 0;"></div><div class="skeleton" style="width:190px;height:12px;margin:2px 0 4px;"></div></div><div class="skeleton" style="width:120px;height:6px;border-radius:3px;"></div></div>
+          </div>
+
+          <div class="save-bar">
+            <button class="btn btn-secondary" onclick="pullFromServer()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
+              从服务器拉取
+            </button>
+            <button class="btn btn-primary" onclick="pushToServer()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+              同步到服务器
+            </button>
+          </div>
+
+          <div class="alert alert-success" id="shader-success" style="display:none;"></div>
+          <div class="alert alert-error" id="shader-error" style="display:none;"></div>
+        </div>
+      </section>
+
+      <!-- ===== RESOURCES ===== -->
+      <section class="dash-section" id="section-resources">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">资源包管理</h1>
+          <span class="dash-card__badge">同步到 Minecraft 客户端</span>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">已安装资源包</h2>
+          </div>
+          <div class="resource-list" id="resource-list"></div>
+          <div class="empty-state" id="resource-empty" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text-tertiary);margin:0 auto 16px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <p style="margin-bottom:16px;">暂无资源包，添加一个开始吧</p>
+            <button class="btn btn-secondary btn-sm" onclick="addResource()">添加资源包</button>
+          </div>
+
+          <button class="btn btn-secondary add-resource-btn" onclick="addResource()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            添加资源包
+          </button>
+
+          <div class="save-bar">
+            <button class="btn btn-secondary" onclick="pullFromServer()">从服务器拉取</button>
+            <button class="btn btn-primary" onclick="pushToServer()">同步到服务器</button>
+          </div>
+
+          <div class="alert alert-success" id="resource-success" style="display:none;"></div>
+          <div class="alert alert-error" id="resource-error" style="display:none;"></div>
+        </div>
+      </section>
+
+      <!-- ===== PRESETS ===== -->
+      <section class="dash-section" id="section-presets">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">预设管理</h1>
+          <button class="btn btn-primary btn-sm" onclick="showNewPresetModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新建预设
+          </button>
+        </div>
+
+        <div class="presets-grid" id="presets-grid">
+          <div class="preset-skeleton" style="display:none;">
+            <div class="preset-card"><div class="skeleton" style="width:60%;height:18px;border-radius:6px;margin-bottom:8px;"></div><div class="skeleton" style="width:90%;height:12px;border-radius:4px;margin-bottom:4px;"></div><div class="skeleton" style="width:75%;height:12px;border-radius:4px;margin-bottom:12px;"></div><div class="skeleton" style="width:40%;height:10px;border-radius:4px;margin-bottom:16px;"></div><div style="display:flex;gap:8px;"><div class="skeleton" style="width:60px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:70px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:50px;height:30px;border-radius:8px;"></div></div></div>
+          </div>
+          <div class="preset-skeleton" style="display:none;">
+            <div class="preset-card"><div class="skeleton" style="width:55%;height:18px;border-radius:6px;margin-bottom:8px;"></div><div class="skeleton" style="width:85%;height:12px;border-radius:4px;margin-bottom:4px;"></div><div class="skeleton" style="width:70%;height:12px;border-radius:4px;margin-bottom:12px;"></div><div class="skeleton" style="width:35%;height:10px;border-radius:4px;margin-bottom:16px;"></div><div style="display:flex;gap:8px;"><div class="skeleton" style="width:60px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:70px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:50px;height:30px;border-radius:8px;"></div></div></div>
+          </div>
+          <div class="preset-skeleton" style="display:none;">
+            <div class="preset-card"><div class="skeleton" style="width:65%;height:18px;border-radius:6px;margin-bottom:8px;"></div><div class="skeleton" style="width:80%;height:12px;border-radius:4px;margin-bottom:4px;"></div><div class="skeleton" style="width:88%;height:12px;border-radius:4px;margin-bottom:12px;"></div><div class="skeleton" style="width:45%;height:10px;border-radius:4px;margin-bottom:16px;"></div><div style="display:flex;gap:8px;"><div class="skeleton" style="width:60px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:70px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:50px;height:30px;border-radius:8px;"></div></div></div>
+          </div>
+        </div>
+        <div class="empty-state" id="presets-empty" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" style="color:var(--text-tertiary)"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          <p>暂无预设，创建你的第一个预设吧</p>
+          <button class="btn btn-primary btn-sm" onclick="showNewPresetModal()">新建预设</button>
+        </div>
+
+        <!-- New Preset Modal -->
+        <div class="modal-overlay" id="preset-modal">
+          <div class="modal">
+            <div class="modal-header">
+              <h3 class="modal-title">新建预设</h3>
+              <button class="modal-close" onclick="closePresetModal()">&times;</button>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="preset-name">预设名称</label>
+              <input class="form-input" id="preset-name" type="text" placeholder="例如：PVP 高性能" maxlength="50" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="preset-desc">描述（可选）</label>
+              <textarea class="form-input" id="preset-desc" placeholder="描述这个预设的用途..." rows="2" maxlength="200"></textarea>
+            </div>
+            <!-- Preset Preview -->
+            <div class="form-group">
+              <label class="form-label">当前设置预览</label>
+              <div class="preset-preview" id="preset-preview">
+                <div class="preset-preview__shader">
+                  <span class="preset-preview__label">光影设置:</span>
+                  <div class="preset-preview__items" id="preset-preview-shader"></div>
+                </div>
+                <div class="preset-preview__packs">
+                  <span class="preset-preview__label">资源包:</span>
+                  <div class="preset-preview__items" id="preset-preview-packs">暂无</div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="closePresetModal()">取消</button>
+              <button class="btn btn-primary" onclick="createPreset()">创建</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SHARE ===== -->
+      <section class="dash-section" id="section-share">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">配置分享</h1>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">生成分享链接</h2>
+          </div>
+          <p style="color:var(--text-secondary); font-size:0.875rem; margin-bottom:16px;">
+            将你的当前光影设置和资源包配置生成分享链接，一键分享给好友。
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="share-name">分享名称</label>
+            <input class="form-input" id="share-name" type="text" placeholder="给这个分享起个名字" maxlength="50" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="share-desc">描述（可选）</label>
+            <textarea class="form-input" id="share-desc" rows="2" placeholder="描述这个配置的适用场景..." maxlength="200"></textarea>
+          </div>
+          <div class="alert alert-success" id="share-success" style="display:none;"></div>
+          <div class="alert alert-error" id="share-error" style="display:none;"></div>
+          <button class="btn btn-primary" onclick="createShare()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            生成并复制链接
+          </button>
+        </div>
+
+        <div class="dash-card" style="margin-top:16px;">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">我的分享链接</h2>
+          </div>
+          <div class="share-list" id="share-list"></div>
+          <div class="share-skeleton" id="share-skeleton" style="display:none;">
+            <div class="share-item"><div class="share-item__info"><div class="skeleton" style="width:120px;height:14px;border-radius:4px;margin-bottom:6px;"></div><div class="skeleton" style="width:200px;height:12px;border-radius:4px;"></div></div><div class="skeleton" style="width:70px;height:30px;border-radius:8px;"></div></div>
+            <div class="share-item"><div class="share-item__info"><div class="skeleton" style="width:100px;height:14px;border-radius:4px;margin-bottom:6px;"></div><div class="skeleton" style="width:180px;height:12px;border-radius:4px;"></div></div><div class="skeleton" style="width:70px;height:30px;border-radius:8px;"></div></div>
+          </div>
+          <div class="empty-state" id="share-empty" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text-tertiary);margin:0 auto 16px;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <p style="margin-bottom:16px;">还没有分享链接</p>
+            <button class="btn btn-primary btn-sm" onclick="showNewShareModal()">生成分享链接</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== DOWNLOADS ===== -->
+      <section class="dash-section" id="section-downloads">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">下载历史</h1>
+          <span class="dash-card__badge">最近 50 条</span>
+        </div>
+        <div class="dash-card">
+          <div class="table-wrap">
+            <table class="data-table" id="downloads-table">
+              <thead>
+                <tr>
+                  <th>版本</th>
+                  <th>操作系统</th>
+                  <th>下载时间</th>
+                </tr>
+              </thead>
+              <tbody id="downloads-body">
+                <tr class="downloads-skeleton" style="display:none;"><td><div class="skeleton" style="width:60px;height:14px;"></div></td><td><div class="skeleton" style="width:50px;height:20px;border-radius:10px;"></div></td><td><div class="skeleton" style="width:140px;height:14px;"></div></td></tr>
+                <tr class="downloads-skeleton" style="display:none;"><td><div class="skeleton" style="width:55px;height:14px;"></div></td><td><div class="skeleton" style="width:45px;height:20px;border-radius:10px;"></div></td><td><div class="skeleton" style="width:150px;height:14px;"></div></td></tr>
+                <tr class="downloads-skeleton" style="display:none;"><td><div class="skeleton" style="width:65px;height:14px;"></div></td><td><div class="skeleton" style="width:55px;height:20px;border-radius:10px;"></div></td><td><div class="skeleton" style="width:130px;height:14px;"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="downloads-empty" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text-tertiary);margin:0 auto 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <p>还没有下载记录</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PROFILE ===== -->
+      <section class="dash-section" id="section-profile">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">个人资料</h1>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">基本信息</h2>
+          </div>
+          <div class="alert alert-success" id="profile-success" style="display:none;"></div>
+          <div class="alert alert-error" id="profile-error" style="display:none;"></div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">用户名</label>
+              <input class="form-input" id="profile-username" type="text" maxlength="20" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">邮箱</label>
+              <input class="form-input" id="profile-email" type="email" disabled />
+            </div>
+            <div class="form-group">
+              <label class="form-label">个人简介</label>
+              <textarea class="form-input" id="profile-bio" placeholder="介绍一下你自己..." rows="3" maxlength="300"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">网站</label>
+              <input class="form-input" id="profile-website" type="url" placeholder="https://yourwebsite.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Discord</label>
+              <input class="form-input" id="profile-discord" type="text" placeholder="username#1234" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Twitter / X</label>
+              <input class="form-input" id="profile-twitter" type="text" placeholder="@username" />
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveProfile()">保存资料</button>
+        </div>
+      </section>
+
+      <!-- ===== PASSWORD ===== -->
+      <section class="dash-section" id="section-password">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">修改密码</h1>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">设置新密码</h2>
+          </div>
+          <div class="alert alert-success" id="password-success" style="display:none;"></div>
+          <div class="alert alert-error" id="password-error" style="display:none;"></div>
+          <div class="form-group">
+            <label class="form-label" for="old-password">当前密码</label>
+            <input class="form-input" id="old-password" type="password" placeholder="输入当前密码" autocomplete="current-password" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-password">新密码</label>
+            <input class="form-input" id="new-password" type="password" placeholder="输入新密码（至少 8 位）" autocomplete="new-password" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirm-password">确认新密码</label>
+            <input class="form-input" id="confirm-password" type="password" placeholder="再次输入新密码" autocomplete="new-password" />
+          </div>
+          <button class="btn btn-primary" onclick="changePassword()">修改密码</button>
+        </div>
+      </section>
+
+      <!-- ===== EMAIL ===== -->
+      <section class="dash-section" id="section-email">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">修改邮箱</h1>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">更换邮箱地址</h2>
+          </div>
+          <div class="alert alert-success" id="email-success" style="display:none;"></div>
+          <div class="alert alert-error" id="email-error" style="display:none;"></div>
+          <div class="alert alert-info" id="email-info" style="display:none;"></div>
+          <p style="color:var(--text-secondary); font-size:0.875rem; margin-bottom:16px;">
+            输入新邮箱地址后，系统会向新邮箱发送验证链接。点击链接确认后，邮箱将立即变更。
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="new-email">新邮箱</label>
+            <input class="form-input" id="new-email" type="email" placeholder="new@email.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="email-password">确认密码</label>
+            <input class="form-input" id="email-password" type="password" placeholder="输入当前密码以确认身份" autocomplete="current-password" />
+          </div>
+          <button class="btn btn-primary" onclick="changeEmail()">发送验证邮件</button>
+        </div>
+      </section>
+
+      <!-- ===== LOGIN HISTORY ===== -->
+      <section class="dash-section" id="section-login-history">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">登录历史</h1>
+        </div>
+        <div class="dash-card">
+          <div class="table-wrap">
+            <table class="data-table" id="history-table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>IP 地址</th>
+                  <th>设备</th>
+                  <th>浏览器</th>
+                  <th>操作系统</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody id="history-body">
+                <tr class="history-skeleton"><td><div class="skeleton" style="width:160px;height:14px;"></div></td><td><div class="skeleton" style="width:110px;height:14px;"></div></td><td><div class="skeleton" style="width:60px;height:20px;border-radius:10px;"></div></td><td><div class="skeleton" style="width:80px;height:14px;"></div></td><td><div class="skeleton" style="width:70px;height:14px;"></div></td><td><div class="skeleton" style="width:50px;height:20px;border-radius:10px;"></div></td></tr>
+                <tr class="history-skeleton"><td><div class="skeleton" style="width:155px;height:14px;"></div></td><td><div class="skeleton" style="width:105px;height:14px;"></div></td><td><div class="skeleton" style="width:65px;height:20px;border-radius:10px;"></div></td><td><div class="skeleton" style="width:90px;height:14px;"></div></td><td><div class="skeleton" style="width:75px;height:14px;"></div></td><td><div class="skeleton" style="width:48px;height:20px;border-radius:10px;"></div></td></tr>
+                <tr class="history-skeleton"><td><div class="skeleton" style="width:150px;height:14px;"></div></td><td><div class="skeleton" style="width:100px;height:14px;"></div></td><td><div class="skeleton" style="width:55px;height:20px;border-radius:10px;"></div></td><td><div class="skeleton" style="width:85px;height:14px;"></div></td><td><div class="skeleton" style="width:68px;height:14px;"></div></td><td><div class="skeleton" style="width:52px;height:20px;border-radius:10px;"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="history-empty" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text-tertiary);margin:0 auto 16px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <p>暂无登录记录</p>
+          </div>
+          <div class="pagination" id="history-pagination" style="display:none;">
+            <button class="btn btn-secondary btn-sm" id="history-prev" onclick="loadHistory(currentPage - 1)">上一页</button>
+            <span id="history-page-info"></span>
+            <button class="btn btn-secondary btn-sm" id="history-next" onclick="loadHistory(currentPage + 1)">下一页</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SESSIONS ===== -->
+      <section class="dash-section" id="section-sessions">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">会话管理</h1>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">活跃会话</h2>
+            <button class="btn btn-secondary btn-sm" onclick="revokeAllSessions()">吊销其他所有会话</button>
+          </div>
+          <div class="alert alert-success" id="sessions-success" style="display:none;"></div>
+          <div class="alert alert-error" id="sessions-error" style="display:none;"></div>
+          <div class="sessions-list" id="sessions-list"></div>
+          <div class="sessions-skeleton" id="sessions-skeleton" style="display:none;">
+            <div class="session-item"><div class="session-item__icon"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;"></div></div><div class="session-item__info"><div class="skeleton" style="width:140px;height:14px;border-radius:4px;margin-bottom:6px;"></div><div class="skeleton" style="width:220px;height:12px;border-radius:4px;"></div></div><div class="skeleton" style="width:50px;height:30px;border-radius:8px;"></div></div>
+            <div class="session-item"><div class="session-item__icon"><div class="skeleton" style="width:36px;height:36px;border-radius:8px;"></div></div><div class="session-item__info"><div class="skeleton" style="width:160px;height:14px;border-radius:4px;margin-bottom:6px;"></div><div class="skeleton" style="width:200px;height:12px;border-radius:4px;"></div></div><div class="skeleton" style="width:50px;height:30px;border-radius:8px;"></div></div>
+          </div>
+          <div class="empty-state" id="sessions-empty" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text-tertiary);margin:0 auto 16px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <p>当前设备是唯一登录中的会话，账号安全</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== VERSIONS ===== -->
+      <section class="dash-section" id="section-versions">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">版本历史</h1>
+          <button class="btn btn-primary btn-sm" onclick="showSaveSnapshotModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            保存快照
+          </button>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card__header">
+            <h2 class="dash-card__title">快照列表</h2>
+          </div>
+          <div class="versions-list" id="versions-list">
+            <div class="versions-skeleton" id="versions-skeleton" style="display:none;">
+              <div class="version-item"><div class="version-item__info"><div class="skeleton" style="width:140px;height:16px;border-radius:4px;margin-bottom:6px;"></div><div class="skeleton" style="width:200px;height:12px;border-radius:4px;"></div></div><div style="display:flex;gap:8px;"><div class="skeleton" style="width:60px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:50px;height:30px;border-radius:8px;"></div></div></div>
+              <div class="version-item"><div class="version-item__info"><div class="skeleton" style="width:120px;height:16px;border-radius:4px;margin-bottom:6px;"></div><div class="skeleton" style="width:180px;height:12px;border-radius:4px;"></div></div><div style="display:flex;gap:8px;"><div class="skeleton" style="width:60px;height:30px;border-radius:8px;"></div><div class="skeleton" style="width:50px;height:30px;border-radius:8px;"></div></div></div>
+            </div>
+          </div>
+          <div class="empty-state" id="versions-empty" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="color:var(--text-tertiary);margin:0 auto 16px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <p>暂无版本快照</p>
+            <button class="btn btn-primary btn-sm" onclick="showSaveSnapshotModal()">保存第一个快照</button>
+          </div>
+        </div>
+
+        <!-- Save Snapshot Modal -->
+        <div class="modal-overlay" id="snapshot-modal">
+          <div class="modal">
+            <div class="modal-header">
+              <h3 class="modal-title">保存配置快照</h3>
+              <button class="modal-close" onclick="closeSnapshotModal()">&times;</button>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="snapshot-name">快照名称</label>
+              <input class="form-input" id="snapshot-name" type="text" placeholder="例如：PVP 前的备份" maxlength="50" />
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="closeSnapshotModal()">取消</button>
+              <button class="btn btn-primary" onclick="saveSnapshot()">保存</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main><!-- .dash-content -->
+  </div><!-- .dash-layout -->
+
+  <!-- ========== Overlay for mobile sidebar ========== -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- ========== Keyboard Shortcuts Modal ========== -->
+  <div class="modal-overlay" id="shortcuts-modal">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">键盘快捷键</h3>
+        <button class="modal-close" onclick="closeShortcutsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top:8px;">
+        <div class="shortcuts-group">
+          <div class="shortcuts-group__title">全局</div>
+          <div class="shortcuts-list">
+            <div class="shortcut-item">
+              <kbd>?</kbd>
+              <span>打开快捷键说明</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl</kbd><span>+</span><kbd>S</kbd>
+              <span>同步到服务器</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl</kbd><span>+</span><kbd>P</kbd>
+              <span>新建预设</span>
+            </div>
+          </div>
+        </div>
+        <div class="shortcuts-group">
+          <div class="shortcuts-group__title">导航</div>
+          <div class="shortcuts-list">
+            <div class="shortcut-item">
+              <kbd>G</kbd><span>+</span><kbd>H</kbd>
+              <span>回到首页</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>G</kbd><span>+</span><kbd>S</kbd>
+              <span>光影设置</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>G</kbd><span>+</span><kbd>P</kbd>
+              <span>预设管理</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>G</kbd><span>+</span><kbd>D</kbd>
+              <span>下载历史</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>G</kbd><span>+</span><kbd>A</kbd>
+              <span>账号设置</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:12px 24px;border-top:1px solid var(--border-light);text-align:center;">
+        <span style="font-size:0.8125rem;color:var(--text-secondary);">按 <kbd style="padding:2px 6px;background:var(--surface-2);border-radius:4px;border:1px solid var(--border-light);">Esc</kbd> 关闭</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Onboarding Modal ========== -->
+  <div class="modal-overlay" id="onboarding-modal">
+    <div class="onboarding-modal__content">
+      <button class="onboarding-modal__skip" onclick="skipOnboarding()" aria-label="跳过引导">跳过</button>
+      <div class="onboarding-modal__steps">
+        <div class="onboarding-step-dot active" data-step="0"></div>
+        <div class="onboarding-step-dot" data-step="1"></div>
+        <div class="onboarding-step-dot" data-step="2"></div>
+        <div class="onboarding-step-dot" data-step="3"></div>
+      </div>
+      <div class="onboarding-modal__body" id="onboarding-body">
+        <!-- Step 0: Welcome -->
+        <div class="onboarding-step" data-step="0">
+          <div class="onboarding-step__icon">
+            <svg viewBox="0 0 48 48" fill="none" width="64" height="64"><circle cx="24" cy="24" r="24" fill="var(--accent-light)"/><path d="M24 14c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10zm0 16c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z" fill="var(--accent)"/><circle cx="24" cy="24" r="3" fill="var(--accent)"/></svg>
+          </div>
+          <h2 class="onboarding-step__title">欢迎使用 bestfps</h2>
+          <p class="onboarding-step__desc">让我们花一分钟带你了解主要功能，快速上手 Minecraft FPS 优化。</p>
+        </div>
+        <!-- Step 1: Dashboard -->
+        <div class="onboarding-step" data-step="1" style="display:none;">
+          <div class="onboarding-step__icon">
+            <svg viewBox="0 0 48 48" fill="none" width="64" height="64"><circle cx="24" cy="24" r="24" fill="rgba(0,113,227,0.1)"/><rect x="10" y="14" width="12" height="12" rx="3" fill="#0071e3"/><rect x="26" y="14" width="12" height="12" rx="3" fill="#0071e3" opacity="0.6"/><rect x="10" y="30" width="12" height="8" rx="3" fill="#0071e3" opacity="0.4"/><rect x="26" y="30" width="12" height="8" rx="3" fill="#0071e3" opacity="0.7"/></svg>
+          </div>
+          <h2 class="onboarding-step__title">Dashboard 控制台</h2>
+          <p class="onboarding-step__desc">在控制台首页查看你的统计数据、下载趋势和最新公告。使用左侧边栏快速导航到各个功能模块。</p>
+          <div class="onboarding-tip">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="8" cy="8" r="7"/><path d="M8 5v4M8 11v1"/></svg>
+            按 <kbd>?</kbd> 可随时查看所有快捷键
+          </div>
+        </div>
+        <!-- Step 2: Shader Settings -->
+        <div class="onboarding-step" data-step="2" style="display:none;">
+          <div class="onboarding-step__icon">
+            <svg viewBox="0 0 48 48" fill="none" width="64" height="64"><circle cx="24" cy="24" r="24" fill="rgba(52,199,89,0.1)"/><path d="M24 8l3 8h9l-7.5 5.5 3 9-7.5-5.5-7.5 5.5 3-9L12 16h9z" fill="#34c759"/></svg>
+          </div>
+          <h2 class="onboarding-step__title">光影与渲染设置</h2>
+          <p class="onboarding-step__desc">精细调节各项渲染参数以获得最佳帧率。推荐配置已针对不同硬件档位预设好了最优值，只需选择你的显卡等级即可。</p>
+          <div class="onboarding-tip">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="8" cy="8" r="7"/><path d="M8 5v4M8 11v1"/></svg>
+            修改后记得点"同步到服务器"保存
+          </div>
+        </div>
+        <!-- Step 3: Presets -->
+        <div class="onboarding-step" data-step="3" style="display:none;">
+          <div class="onboarding-step__icon">
+            <svg viewBox="0 0 48 48" fill="none" width="64" height="64"><circle cx="24" cy="24" r="24" fill="rgba(255,149,0,0.1)"/><rect x="10" y="14" width="28" height="20" rx="4" fill="#ff9500" opacity="0.8"/><path d="M16 20h16M16 24h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <h2 class="onboarding-step__title">预设与分享</h2>
+          <p class="onboarding-step__desc">保存多套配置预设并在游戏场景间快速切换。一键生成分享链接，让好友也能使用你的优化配置。</p>
+          <div class="onboarding-tip">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="8" cy="8" r="7"/><path d="M8 5v4M8 11v1"/></svg>
+            预设支持设为默认，开服自动加载
+          </div>
+        </div>
+      </div>
+      <div class="onboarding-modal__footer">
+        <button class="btn btn-secondary btn-sm" id="onboarding-prev" onclick="prevOnboardingStep()" style="display:none;">上一步</button>
+        <button class="btn btn-primary btn-sm" id="onboarding-next" onclick="nextOnboardingStep()">下一步</button>
+      </div>
+    </div>
+  </div>
+  <!-- Dashboard JS bundle (built via esbuild) -->
+  <script src="/build/main.js"></script>
+  <script>
+    // Auth check
+    const token = localStorage.getItem('token');
+    const user = token ? JSON.parse(localStorage.getItem('user') || 'null') : null;
+    if (!token || !user) {
+      window.location.href = '/login';
+    }
+
+    // Start initialization
+    initTheme();
+    initSidebar();
+    initKeyboardShortcuts();
+    initNavigation();
+
+    // Patch showSection to load section-specific data on navigation
+    const _origShowSection = window.showSection;
+    window.showSection = function(name) {
+      _origShowSection(name);
+      if (name === 'sessions') window.loadSessions();
+      if (name === 'login-history') window.loadHistory(1);
+      if (name === 'versions') window.loadVersions();
+    };
+
+    window.initDashboard();
+    if (!localStorage.getItem('hasSeenOnboarding')) {
+      setTimeout(window.showOnboardingModal, 800);
+    }
+  </script>
+</body>
+</html>
