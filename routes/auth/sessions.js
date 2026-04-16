@@ -2,7 +2,7 @@
  * 认证路由 - 会话与账号管理模块（登录历史、活动动态、会话管理、账号注销）
  */
 const { db, logActivity } = require('../../db');
-const { requireAuth } = require('../../middleware/auth');
+const { requireAuth, JWT_COOKIE_NAME } = require('../../middleware/auth');
 
 function setup(router) {
   router.get('/login-history', requireAuth, (req, res) => {
@@ -28,6 +28,7 @@ function setup(router) {
             page,
             limit,
             total: countRow ? countRow.total : 0,
+            totalPages: Math.max(1, Math.ceil((countRow ? countRow.total : 0) / limit)),
           });
         }
       );
@@ -107,40 +108,46 @@ function setup(router) {
   });
 
   router.delete('/account', requireAuth, async (req, res) => {
-    const { password, confirmation } = req.body;
+    const password = String(req.body?.password || '');
+    const confirmation = String(req.body?.confirmation || '').trim();
     const bcrypt = require('bcryptjs');
 
-    if (password !== undefined) {
-      db.get('SELECT password_hash FROM users WHERE id = ?', [req.user.id], async (err, user) => {
-        if (err) return res.status(500).json({ error: '服务器内部错误' });
+    if (!password) {
+      return res.status(400).json({ error: '密码不能为空' });
+    }
 
-        try {
-          const valid = await bcrypt.compare(password, user.password_hash);
-          if (!valid) {
-            return res.status(401).json({ error: '密码不正确' });
-          }
-          res.json({
+    db.get('SELECT password_hash FROM users WHERE id = ?', [req.user.id], async (err, user) => {
+      if (err) return res.status(500).json({ error: '服务器内部错误' });
+      if (!user) return res.status(404).json({ error: '用户不存在' });
+
+      try {
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) {
+          return res.status(401).json({ error: '密码不正确' });
+        }
+
+        if (confirmation !== 'DELETE MY ACCOUNT') {
+          return res.json({
             requires_confirmation: true,
             message: '请输入 "DELETE MY ACCOUNT" 确认注销',
             warning: '此操作不可逆，所有数据将被永久删除',
           });
-        } catch (e) {
-          res.status(500).json({ error: '服务器内部错误' });
         }
-      });
-    } else if (confirmation === 'DELETE MY ACCOUNT') {
-      const userId = req.user.id;
-      db.run('DELETE FROM users WHERE id = ?', [userId], (err) => {
-        if (err) {
-          console.error('[Auth/Sessions] Delete account error:', err);
-          return res.status(500).json({ error: '服务器内部错误' });
-        }
-        logActivity(userId, 'account_deleted', `注销了账号 #${userId}`, {}, req.ip);
-        res.json({ message: '账号已永久注销，再见！' });
-      });
-    } else {
-      res.status(400).json({ error: '请输入 "DELETE MY ACCOUNT" 确认' });
-    }
+
+        db.run('DELETE FROM users WHERE id = ?', [req.user.id], (deleteErr) => {
+          if (deleteErr) {
+            console.error('[Auth/Sessions] Delete account error:', deleteErr);
+            return res.status(500).json({ error: '服务器内部错误' });
+          }
+          console.log('[Auth/Sessions] Account deleted:', req.user.id, req.ip);
+          res.clearCookie(JWT_COOKIE_NAME, { path: '/' });
+          res.clearCookie('csrf_token', { path: '/' });
+          res.json({ message: '账号已永久注销，再见！' });
+        });
+      } catch (e) {
+        res.status(500).json({ error: '服务器内部错误' });
+      }
+    });
   });
 }
 

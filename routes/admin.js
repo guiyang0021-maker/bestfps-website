@@ -12,11 +12,18 @@ const ACTIONS = ['suspend', 'unsuspend', 'ban'];
 
 const router = express.Router();
 
+function normalizeIpForDisplay(value) {
+  if (!value) return '';
+  return String(value)
+    .replace(/^::ffff:/i, '')
+    .replace(/^::1$/i, '127.0.0.1');
+}
+
 // 所有路由需要管理员权限
 router.use(requireAuth, requireAdmin);
 
 router.get('/stats', cached(120), (req, res) => {
-  let pending = 7;
+  let pending = 3;
   const results = {};
   let responded = false;
 
@@ -40,28 +47,20 @@ router.get('/stats', cached(120), (req, res) => {
     });
   };
 
-  db.get('SELECT COUNT(*) as total_cnt FROM users', [], (err, row) => {
+  db.get(`
+    SELECT
+      COUNT(*) as total_cnt,
+      SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_cnt,
+      SUM(CASE WHEN status IN ('suspended', 'banned') THEN 1 ELSE 0 END) as suspended_cnt,
+      SUM(CASE WHEN verified = 1 THEN 1 ELSE 0 END) as verified_cnt,
+      SUM(CASE WHEN date(created_at) = date('now') THEN 1 ELSE 0 END) as today_cnt
+    FROM users
+  `, [], (err, row) => {
     if (err) return done(err);
     results.total = row ? (row.total_cnt || row.total || 0) : 0;
-    if (--pending === 0) done();
-  });
-  db.get("SELECT COUNT(*) as active_cnt FROM users WHERE status = 'active'", [], (err, row) => {
-    if (err) return done(err);
     results.active_cnt = row ? (row.active_cnt || row.active || 0) : 0;
-    if (--pending === 0) done();
-  });
-  db.get("SELECT COUNT(*) as suspended_cnt FROM users WHERE status = 'suspended' OR status = 'banned'", [], (err, row) => {
-    if (err) return done(err);
     results.suspended_cnt = row ? (row.suspended_cnt || row.suspended || 0) : 0;
-    if (--pending === 0) done();
-  });
-  db.get('SELECT COUNT(*) as verified_cnt FROM users WHERE verified = 1', [], (err, row) => {
-    if (err) return done(err);
     results.verified_cnt = row ? (row.verified_cnt || row.verified || 0) : 0;
-    if (--pending === 0) done();
-  });
-  db.get("SELECT COUNT(*) as today_cnt FROM users WHERE date(created_at) = date('now')", [], (err, row) => {
-    if (err) return done(err);
     results.today_cnt = row ? (row.today_cnt || row.today || 0) : 0;
     if (--pending === 0) done();
   });
@@ -107,13 +106,41 @@ router.get('/users', (req, res) => {
     if (err) return res.status(500).json({ error: '服务器内部错误' });
 
     db.all(
-      `SELECT id, username, email, role, status, verified, created_at, suspended_at, suspend_reason FROM users ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT
+         u.id,
+         u.username,
+         u.email,
+         u.role,
+         u.status,
+         u.verified,
+         u.created_at,
+         u.suspended_at,
+         u.suspend_reason,
+         (
+           SELECT lh.ip
+           FROM login_history lh
+           WHERE lh.user_id = u.id
+           ORDER BY lh.created_at DESC
+           LIMIT 1
+         ) AS last_login_ip,
+         (
+           SELECT lh.created_at
+           FROM login_history lh
+           WHERE lh.user_id = u.id
+           ORDER BY lh.created_at DESC
+           LIMIT 1
+         ) AS last_login_at
+       FROM users u
+       ${whereClause}
+       ORDER BY u.created_at DESC
+       LIMIT ? OFFSET ?`,
       [...params, limit, offset],
       (err, rows) => {
         if (err) return res.status(500).json({ error: '服务器内部错误' });
 
         const users = rows.map(u => ({
           ...u,
+          last_login_ip: normalizeIpForDisplay(u.last_login_ip),
           verified: u.verified === 1,
           is_current: u.id === req.user.id,
         }));
@@ -134,13 +161,80 @@ router.get('/users/:id', (req, res) => {
   if (!userId || isNaN(userId)) return res.status(400).json({ error: '无效的用户ID' });
 
   db.get(
-    'SELECT id, username, email, role, status, verified, bio, website, social_discord, social_twitter, social_github, created_at, suspended_at, suspend_reason FROM users WHERE id = ?',
+    `SELECT
+       u.id,
+       u.username,
+       u.email,
+       u.role,
+       u.status,
+       u.verified,
+       u.bio,
+       u.website,
+       u.social_discord,
+       u.social_twitter,
+       u.social_github,
+       u.created_at,
+       u.suspended_at,
+       u.suspend_reason,
+       (
+         SELECT lh.ip
+         FROM login_history lh
+         WHERE lh.user_id = u.id
+         ORDER BY lh.created_at DESC
+         LIMIT 1
+       ) AS last_login_ip,
+       (
+         SELECT lh.created_at
+         FROM login_history lh
+         WHERE lh.user_id = u.id
+         ORDER BY lh.created_at DESC
+         LIMIT 1
+       ) AS last_login_at,
+       (
+         SELECT lh.browser
+         FROM login_history lh
+         WHERE lh.user_id = u.id
+         ORDER BY lh.created_at DESC
+         LIMIT 1
+       ) AS last_login_browser,
+       (
+         SELECT lh.os
+         FROM login_history lh
+         WHERE lh.user_id = u.id
+         ORDER BY lh.created_at DESC
+         LIMIT 1
+       ) AS last_login_os,
+       (
+         SELECT lh.device_type
+         FROM login_history lh
+         WHERE lh.user_id = u.id
+         ORDER BY lh.created_at DESC
+         LIMIT 1
+       ) AS last_login_device_type,
+       (
+         SELECT s.ip
+         FROM user_sessions s
+         WHERE s.user_id = u.id
+         ORDER BY s.created_at DESC
+         LIMIT 1
+       ) AS last_session_ip,
+       (
+         SELECT s.created_at
+         FROM user_sessions s
+         WHERE s.user_id = u.id
+         ORDER BY s.created_at DESC
+         LIMIT 1
+       ) AS last_session_at
+     FROM users u
+     WHERE u.id = ?`,
     [userId],
     (err, user) => {
       if (err) return res.status(500).json({ error: '服务器内部错误' });
       if (!user) return res.status(404).json({ error: '用户不存在' });
 
       user.verified = user.verified === 1;
+      user.last_login_ip = normalizeIpForDisplay(user.last_login_ip);
+      user.last_session_ip = normalizeIpForDisplay(user.last_session_ip);
       user.is_current = user.id === req.user.id;
 
       let pending = 4;
@@ -250,10 +344,35 @@ router.get('/login-history/:userId', (req, res) => {
       [userId, limit, offset],
       (err, rows) => {
         if (err) return res.status(500).json({ error: '服务器内部错误' });
-        res.json({ history: rows, page, limit, total: countRow?.total || 0 });
+        res.json({
+          history: rows.map((row) => ({ ...row, ip: normalizeIpForDisplay(row.ip) })),
+          page,
+          limit,
+          total: countRow?.total || 0,
+        });
       }
     );
   });
+});
+
+router.get('/sessions/:userId', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 10), 50);
+
+  if (!userId || isNaN(userId)) return res.status(400).json({ error: '无效的用户ID' });
+
+  db.all(
+    `SELECT id, jti, ip, device_type, browser, os, created_at, expires_at
+     FROM user_sessions
+     WHERE user_id = ?
+     ORDER BY created_at DESC
+     LIMIT ?`,
+    [userId, limit],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: '服务器内部错误' });
+      res.json({ sessions: rows.map((row) => ({ ...row, ip: normalizeIpForDisplay(row.ip) })) });
+    }
+  );
 });
 
 router.get('/activities/:userId', (req, res) => {

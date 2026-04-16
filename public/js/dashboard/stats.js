@@ -6,6 +6,59 @@
 
   var downloadsChart = null;
 
+  function getChartSeries(downloads) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    var days = [];
+    var countsByDay = {};
+    for (var i = 29; i >= 0; i--) {
+      var date = new Date(today);
+      date.setDate(today.getDate() - i);
+      var key = date.toISOString().slice(0, 10);
+      countsByDay[key] = 0;
+      days.push({ key: key, date: date });
+    }
+
+    downloads.forEach(function (download) {
+      if (!download || !download.downloaded_at) return;
+      var date = new Date(download.downloaded_at);
+      if (isNaN(date.getTime())) return;
+      date.setHours(0, 0, 0, 0);
+      var key = date.toISOString().slice(0, 10);
+      if (Object.prototype.hasOwnProperty.call(countsByDay, key)) {
+        countsByDay[key] += 1;
+      }
+    });
+
+    return {
+      labels: days.map(function (day) {
+        return day.date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+      }),
+      counts: days.map(function (day) {
+        return countsByDay[day.key];
+      }),
+      days: days,
+    };
+  }
+
+  function updateChartDescription(series) {
+    var desc = document.getElementById('downloads-chart-description');
+    if (!desc) return;
+
+    var total = series.counts.reduce(function (sum, count) { return sum + count; }, 0);
+    if (!total) {
+      desc.textContent = '最近 30 天下载趋势图，暂无下载记录。';
+      return;
+    }
+
+    var peakCount = Math.max.apply(null, series.counts);
+    var peakIndex = series.counts.indexOf(peakCount);
+    var peakLabel = peakIndex >= 0 ? series.labels[peakIndex] : '';
+    var recent7 = series.counts.slice(-7).join('、');
+    desc.textContent = '最近 30 天下载趋势图，总下载 ' + total + ' 次；最近 7 天每日下载分别为 ' + recent7 + '；峰值出现在 ' + peakLabel + '，为 ' + peakCount + ' 次。';
+  }
+
   async function loadStats() {
     try {
       window.showSkeleton('chart');
@@ -18,7 +71,7 @@
       document.getElementById('stat-presets').textContent = presetsData.presets ? presetsData.presets.length : '0';
       document.getElementById('stat-shares').textContent = sharesData.shares ? sharesData.shares.filter(function (s) { return !s.is_expired; }).length : '0';
 
-      var user = JSON.parse(localStorage.getItem('user') || 'null');
+      var user = window.currentUser || null;
       if (user && user.created_at) {
         var days = Math.floor((Date.now() - new Date(user.created_at)) / 86400000);
         document.getElementById('stat-days').textContent = days + '天';
@@ -37,17 +90,16 @@
     if (!ctx || typeof Chart === 'undefined') return;
     if (downloadsChart) { try { downloadsChart.destroy(); } catch (e) {} }
 
-    var last30 = downloads.slice(0, 30).reverse();
-    var labels = last30.map(function (d) { return new Date(d.downloaded_at).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }); });
-    var counts = last30.map(function () { return 1; });
+    var series = getChartSeries(downloads);
+    updateChartDescription(series);
 
     downloadsChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
+        labels: series.labels,
         datasets: [{
           label: '下载次数',
-          data: counts,
+          data: series.counts,
           borderColor: '#0071e3',
           backgroundColor: 'rgba(0,113,227,0.08)',
           fill: true,

@@ -22,6 +22,7 @@
   function renderVersions(versions) {
     var list = document.getElementById('versions-list');
     var empty = document.getElementById('versions-empty');
+    var escapeHtml = window.escapeHtml || function (value) { return value == null ? '' : String(value); };
     if (!list) return;
     var skeleton = document.getElementById('versions-skeleton');
     if (skeleton) skeleton.style.display = 'none';
@@ -38,15 +39,30 @@
       item.className = 'version-item';
       item.innerHTML = [
         '<div class="version-item__info">',
-          '<strong class="version-item__name">' + v.name + '</strong>',
+          '<strong class="version-item__name">' + escapeHtml(v.name) + '</strong>',
           '<span class="version-item__time">' + new Date(v.created_at).toLocaleString('zh-CN') + '</span>',
         '</div>',
         '<div class="version-item__actions">',
-          '<button class="btn btn-primary btn-sm" onclick="restoreVersion(' + v.id + ')">恢复</button>',
-          '<button class="btn btn-ghost btn-sm" onclick="deleteVersion(' + v.id + ')" style="color:var(--error);">删除</button>',
+          '<button class="btn btn-primary btn-sm" type="button" data-version-action="restore" data-version-id="' + v.id + '">恢复</button>',
+          '<button class="btn btn-ghost btn-sm" type="button" data-version-action="delete" data-version-id="' + v.id + '" style="color:var(--error);">删除</button>',
         '</div>',
       ].join('');
       list.appendChild(item);
+    });
+  }
+
+  function bindVersionActions() {
+    var list = document.getElementById('versions-list');
+    if (!list || list.dataset.bound === 'true') return;
+    list.dataset.bound = 'true';
+    list.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-version-action]');
+      if (!button) return;
+      var id = parseInt(button.getAttribute('data-version-id'), 10);
+      var action = button.getAttribute('data-version-action');
+      if (!id) return;
+      if (action === 'restore') restoreVersion(id);
+      if (action === 'delete') deleteVersion(id);
     });
   }
 
@@ -105,4 +121,5 @@
   window.saveSnapshot = saveSnapshot;
   window.restoreVersion = restoreVersion;
   window.deleteVersion = deleteVersion;
+  bindVersionActions();
 })();

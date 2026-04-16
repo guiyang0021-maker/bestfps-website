@@ -51,9 +51,16 @@
     nextBtn.textContent = currentOnboardingStep === TOTAL_ONBOARDING_STEPS - 1 ? '开始使用' : '下一步';
   }
 
+  function initOnboardingControls() {
+    document.getElementById('onboarding-skip-btn')?.addEventListener('click', skipOnboarding);
+    document.getElementById('onboarding-prev')?.addEventListener('click', prevOnboardingStep);
+    document.getElementById('onboarding-next')?.addEventListener('click', nextOnboardingStep);
+  }
+
   window.showOnboardingModal = showOnboardingModal;
   window.skipOnboarding = skipOnboarding;
   window.nextOnboardingStep = nextOnboardingStep;
   window.prevOnboardingStep = prevOnboardingStep;
   window.updateOnboardingUI = updateOnboardingUI;
+  window.initOnboardingControls = initOnboardingControls;
 })();

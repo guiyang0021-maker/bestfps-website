@@ -17,32 +17,48 @@ const syncRouter = require('./routes/sync');
 const presetsRouter = require('./routes/presets');
 const shareRouter = require('./routes/share');
 const announcementsRouter = require('./routes/announcements');
+const invoicesRouter = require('./routes/invoices');
+const hwidRouter = require('./routes/hwid');
 const { csrfMiddleware } = require('./middleware/csrf');
 const adminRouter = require('./routes/admin');
+const { requireAuth } = require('./middleware/auth');
+const { requireAdmin } = require('./middleware/admin');
 
 // API 路由
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const baseCspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+  scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+  scriptSrcAttr: ["'unsafe-inline'"],
+  styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+  styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+  fontSrc: ["'self'", "https://fonts.gstatic.com"],
+  imgSrc: ["'self'", "data:", "https:"],
+  connectSrc: ["'self'"],
+  frameSrc: ["'none'"],
+  objectSrc: ["'none'"],
+  upgradeInsecureRequests: [],
+};
+const strictReportOnlyCspDirectives = {
+  ...baseCspDirectives,
+  scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+  scriptSrcAttr: ["'none'"],
+};
 
 app.use(helmet({
   contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
-    },
+    directives: baseCspDirectives,
   },
   crossOriginEmbedderPolicy: false,
+}));
+
+app.use(helmet.contentSecurityPolicy({
+  useDefaults: false,
+  reportOnly: true,
+  directives: strictReportOnlyCspDirectives,
 }));
 
 // CORS
@@ -56,7 +72,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
 }));
 
 app.use(cookieParser());
@@ -77,10 +93,6 @@ app.use(rateLimit({
 // Trust proxy
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
-}
-
-if (!process.env.JWT_SECRET) {
-  console.warn('[WARN] JWT_SECRET 未设置！请在 .env 中设置 JWT_SECRET (至少32字符)');
 }
 
 app.use(compression({
@@ -106,7 +118,13 @@ app.use('/api/sync', syncRouter);
 app.use('/api/presets', presetsRouter);
 app.use('/api/share', shareRouter);
 app.use('/api/announcements', announcementsRouter);
+app.use('/api/invoices', csrfMiddleware, invoicesRouter);
+app.use('/api/hwid', hwidRouter);
 app.use('/api/admin', csrfMiddleware, adminRouter);
+
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: '接口不存在' });
+});
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -152,7 +170,7 @@ app.get('/change-email', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'change-email.html'));
 });
 
-app.get('/admin', (req, res) => {
+app.get('/admin', requireAuth, requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
@@ -162,6 +180,14 @@ app.get('/privacy', (req, res) => {
 
 app.get('/terms', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
+
+app.use((err, req, res, next) => {
+  if (req.path && req.path.startsWith('/api/')) {
+    console.error('[API] Unhandled error:', err);
+    return res.status(err.status || 500).json({ error: err.message || '服务器内部错误' });
+  }
+  next(err);
 });
 
 app.listen(PORT, () => {

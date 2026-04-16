@@ -7,7 +7,7 @@
   async function exportConfig() {
     try {
       var res = await fetch('/api/settings/export', {
-        headers: { Authorization: 'Bearer ' + localStorage.getItem('token') },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('导出失败');
       var data = await res.json();

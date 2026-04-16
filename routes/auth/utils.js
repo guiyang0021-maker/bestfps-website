@@ -66,8 +66,17 @@ function parseUserAgent(ua) {
   return { browser, os, device_type };
 }
 
+function getClientIp(req) {
+  const fallbackIp = req.ip || req.socket?.remoteAddress || req.connection?.remoteAddress || '';
+  if (!fallbackIp) return '';
+  return String(fallbackIp)
+    .replace(/^::ffff:/i, '')
+    .replace(/^::1$/i, '127.0.0.1');
+}
+
 module.exports = {
   PASSWORD_REGEX,
   avatarUpload,
   parseUserAgent,
+  getClientIp,
 };

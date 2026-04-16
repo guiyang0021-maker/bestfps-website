@@ -6,6 +6,19 @@
 
   // ── Skeleton Loader ──────────────────────────────────
   function showSkeleton(container, { rows = 5, cols = 4 } = {}) {
+    if (!container) return;
+
+    if (container.tagName === 'TBODY') {
+      container.innerHTML = Array.from({ length: rows }, () => `
+        <tr>
+          <td colspan="${cols}" style="padding:12px 16px">
+            <div class="skeleton" style="height:20px;width:100%;border-radius:8px"></div>
+          </td>
+        </tr>
+      `).join('');
+      return;
+    }
+
     const colWidths = { 1: '20%', 2: '40%', 3: '60%', 4: '80%', 5: '100%' };
     container.innerHTML = Array.from({ length: rows }, (_, i) =>
       `<div class="skeleton" style="height:48px;margin-bottom:8px;width:${colWidths[cols] || '80%'}"></div>`
@@ -39,10 +52,10 @@
   function confirmAction({ title, message, requiredPhrase, confirmText = '确认', danger = false }) {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
-      overlay.className = 'modal-overlay';
+      overlay.className = 'modal-overlay modal-overlay--open';
       overlay.innerHTML = `
-        <div class="modal" style="max-width:420px">
-          <div class="modal__header">${esc(title)}</div>
+        <div class="modal" style="max-width:420px" role="dialog" aria-modal="true" aria-labelledby="confirm-title" tabindex="-1">
+          <div class="modal__header" id="confirm-title">${esc(title)}</div>
           <div class="modal__body">
             <p>${esc(message)}</p>
             ${requiredPhrase ? `
@@ -61,13 +74,18 @@
       document.body.appendChild(overlay);
 
       const okBtn = overlay.querySelector('#confirm-ok');
+      const cancelBtn = overlay.querySelector('#confirm-cancel');
       const input = overlay.querySelector('#confirm-input');
+      const dialog = overlay.querySelector('.modal');
+      const focusables = () => Array.from(overlay.querySelectorAll('button:not([disabled]), input:not([disabled])'));
 
       if (input) {
         input.addEventListener('input', () => {
           okBtn.disabled = input.value.trim() !== requiredPhrase;
         });
         input.focus();
+      } else if (dialog) {
+        dialog.focus();
       }
 
       const cleanup = (result) => {
@@ -76,14 +94,35 @@
       };
 
       okBtn.onclick = () => cleanup(true);
-      overlay.querySelector('#confirm-cancel').onclick = () => cleanup(false);
+      cancelBtn.onclick = () => cleanup(false);
       overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+      overlay.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          cleanup(false);
+          return;
+        }
+        if (e.key !== 'Tab') return;
+        const items = focusables();
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      });
     });
   }
 
   // ── Pagination ─────────────────────────────────────────
   function renderPagination(container, { page, totalPages, onChange }) {
     if (totalPages <= 1) { container.innerHTML = ''; return; }
+    container.setAttribute('role', 'navigation');
+    container.setAttribute('aria-label', '用户列表分页');
     let html = '<div class="pagination" style="display:flex;align-items:center;gap:4px">';
 
     html += `<button class="btn btn--small" ${page <= 1 ? 'disabled' : ''} data-page="${page - 1}">‹</button>`;
@@ -98,7 +137,7 @@
       if (start > 2) html += '<span style="padding:0 4px;color:var(--color-text-muted)">…</span>';
     }
     for (let i = start; i <= end; i++) {
-      html += `<button class="btn btn--small ${i === page ? 'btn--primary' : ''}" data-page="${i}">${i}</button>`;
+      html += `<button class="btn btn--small ${i === page ? 'btn--primary' : ''}" data-page="${i}" ${i === page ? 'aria-current="page"' : ''}>${i}</button>`;
     }
     if (end < totalPages) {
       if (end < totalPages - 1) html += '<span style="padding:0 4px;color:var(--color-text-muted)">…</span>';

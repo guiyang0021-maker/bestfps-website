@@ -9,7 +9,7 @@ const { db, insertSettingForUser } = require('../../db');
 const { generateToken, JWT_COOKIE_NAME, tokenCookieOptions } = require('../../middleware/auth');
 const { sendVerificationEmail } = require('../../email/sender');
 const { loginLimiter, registerLimiter } = require('../../middleware/rateLimiter');
-const { avatarUpload, parseUserAgent, PASSWORD_REGEX } = require('./utils');
+const { avatarUpload, parseUserAgent, PASSWORD_REGEX, getClientIp } = require('./utils');
 
 function setup(router) {
   router.post('/register', registerLimiter, async (req, res) => {
@@ -52,12 +52,6 @@ function setup(router) {
               const userId = this.lastID;
 
               insertSettingForUser.run(userId);
-
-              const { browser, os, device_type } = parseUserAgent(req.headers['user-agent']);
-              db.run(
-                'INSERT INTO login_history (user_id, ip, user_agent, device_type, browser, os, success) VALUES (?, ?, ?, ?, ?, ?, 1)',
-                [userId, req.ip, req.headers['user-agent'], device_type, browser, os]
-              );
 
               const token = crypto.randomBytes(32).toString('hex');
               const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -108,12 +102,13 @@ function setup(router) {
         }
 
         const { browser, os, device_type } = parseUserAgent(req.headers['user-agent']);
+        const clientIp = getClientIp(req);
         const ua = req.headers['user-agent'];
 
         if (!user) {
           db.run(
-            'INSERT INTO login_history (ip, user_agent, device_type, browser, os, success) VALUES (?, ?, ?, ?, ?, ?, 0)',
-            [req.ip, ua, device_type, browser, os]
+            'INSERT INTO login_history (ip, user_agent, device_type, browser, os, success) VALUES (?, ?, ?, ?, ?, 0)',
+            [clientIp, ua, device_type, browser, os]
           );
           return res.status(401).json({ error: '邮箱或密码错误' });
         }
@@ -131,14 +126,14 @@ function setup(router) {
           if (!valid) {
             db.run(
               'INSERT INTO login_history (user_id, ip, user_agent, device_type, browser, os, success) VALUES (?, ?, ?, ?, ?, ?, 0)',
-              [user.id, req.ip, ua, device_type, browser, os]
+              [user.id, clientIp, ua, device_type, browser, os]
             );
             return res.status(401).json({ error: '邮箱或密码错误' });
           }
 
           db.run(
             'INSERT INTO login_history (user_id, ip, user_agent, device_type, browser, os, success) VALUES (?, ?, ?, ?, ?, ?, 1)',
-            [user.id, req.ip, ua, device_type, browser, os]
+            [user.id, clientIp, ua, device_type, browser, os]
           );
 
           const jti = crypto.randomUUID();
@@ -148,7 +143,7 @@ function setup(router) {
 
           db.run(
             'INSERT INTO user_sessions (user_id, jti, token_hash, expires_at, ip, user_agent, device_type, browser, os) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [user.id, jti, tokenHash, expiresAt, req.ip, ua, device_type, browser, os]
+            [user.id, jti, tokenHash, expiresAt, clientIp, ua, device_type, browser, os]
           );
 
           // CSRF double-submit token (set cookie for client to read)
@@ -188,7 +183,7 @@ function setup(router) {
 
   router.get('/me', require('../../middleware/auth').requireAuth, (req, res) => {
     db.get(
-      'SELECT id, username, email, avatar, verified, bio, website, social_discord, social_twitter, social_github, created_at FROM users WHERE id = ?',
+      'SELECT id, username, display_name, email, avatar, verified, role, status, bio, website, social_discord, social_twitter, social_github, created_at FROM users WHERE id = ?',
       [req.user.id],
       (err, user) => {
         if (err) {

@@ -5,17 +5,105 @@
   'use strict';
 
   var gPressed = false;
+  var lastFocusedElement = null;
+  var FOCUSABLE_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
 
-  function openShortcutsModal() {
-    document.getElementById('shortcuts-modal').classList.add('active');
+  function getShortcutsModal() {
+    return document.getElementById('shortcuts-modal');
+  }
+
+  function getFocusableElements(modal) {
+    return Array.prototype.slice.call(modal.querySelectorAll(FOCUSABLE_SELECTOR)).filter(function (el) {
+      return el.offsetParent !== null || el === document.activeElement;
+    });
+  }
+
+  function openShortcutsModal(triggerEl) {
+    var modal = getShortcutsModal();
+    if (!modal) return;
+
+    lastFocusedElement = triggerEl || document.activeElement;
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+
+    var focusable = getFocusableElements(modal);
+    var target = focusable[0] || modal.querySelector('.modal') || modal;
+    if (target && typeof target.focus === 'function') {
+      target.focus();
+    }
   }
 
   function closeShortcutsModal() {
-    document.getElementById('shortcuts-modal').classList.remove('active');
+    var modal = getShortcutsModal();
+    if (!modal) return;
+
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+
+    if (lastFocusedElement && document.contains(lastFocusedElement) && typeof lastFocusedElement.focus === 'function') {
+      lastFocusedElement.focus();
+    }
+    lastFocusedElement = null;
+  }
+
+  function trapShortcutsFocus(e) {
+    var modal = getShortcutsModal();
+    if (!modal || !modal.classList.contains('active') || e.key !== 'Tab') return;
+
+    var focusable = getFocusableElements(modal);
+    if (!focusable.length) {
+      e.preventDefault();
+      return;
+    }
+
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    var activeInsideModal = modal.contains(document.activeElement);
+
+    if (!activeInsideModal) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+      return;
+    }
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   function initKeyboardShortcuts() {
+    var shortcutsButton = document.getElementById('shortcuts-btn');
+    var shortcutsModal = getShortcutsModal();
+
+    if (shortcutsButton) {
+      shortcutsButton.addEventListener('click', function () {
+        openShortcutsModal(shortcutsButton);
+      });
+    }
+
+    if (shortcutsModal) {
+      shortcutsModal.addEventListener('click', function (e) {
+        if (e.target === shortcutsModal) {
+          closeShortcutsModal();
+        }
+      });
+    }
+    document.getElementById('shortcuts-close-btn')?.addEventListener('click', closeShortcutsModal);
+
     document.addEventListener('keydown', function (e) {
+      trapShortcutsFocus(e);
+
       var tag = document.activeElement.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
@@ -78,6 +166,17 @@
             case 'a': showSection('profile'); break;
           }
         }
+      }
+    });
+
+    document.addEventListener('focusin', function (e) {
+      var modal = getShortcutsModal();
+      if (!modal || !modal.classList.contains('active') || modal.contains(e.target)) return;
+
+      var focusable = getFocusableElements(modal);
+      var target = focusable[0] || modal.querySelector('.modal');
+      if (target && typeof target.focus === 'function') {
+        target.focus();
       }
     });
   }

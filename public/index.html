@@ -58,7 +58,7 @@
       <div class="nav-actions">
         <a href="/login" class="nav__link" id="nav-login">登录</a>
         <a href="/dashboard" class="nav__link nav__link--cta" id="nav-dashboard" style="display:none;">控制面板</a>
-        <a href="#" class="nav__link" id="nav-logout" style="display:none; color:var(--error);" onclick="logout(); return false;">退出</a>
+        <a href="#" class="nav__link" id="nav-logout" style="display:none; color:var(--error);">退出</a>
       </div>
     </nav>
   </header>
@@ -593,23 +593,39 @@
 
   <script>
     // ---- Auth state ----
-    function updateNavAuth() {
-      const token = localStorage.getItem('token');
+    async function updateNavAuth() {
       const loginEl = document.getElementById('nav-login');
       const dashboardEl = document.getElementById('nav-dashboard');
       const logoutEl = document.getElementById('nav-logout');
-      if (token) {
-        loginEl.style.display = 'none';
-        dashboardEl.style.display = 'inline-flex';
-        logoutEl.style.display = 'inline-flex';
+      try {
+        const res = await fetch('/api/auth/me', {
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        });
+        const isLoggedIn = res.ok;
+        if (isLoggedIn) {
+          loginEl.style.display = 'none';
+          dashboardEl.style.display = 'inline-flex';
+          logoutEl.style.display = 'inline-flex';
+        } else {
+          loginEl.style.display = 'inline-flex';
+          dashboardEl.style.display = 'none';
+          logoutEl.style.display = 'none';
+        }
+      } catch (_) {
+        loginEl.style.display = 'inline-flex';
+        dashboardEl.style.display = 'none';
+        logoutEl.style.display = 'none';
       }
     }
     updateNavAuth();
 
-    function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      } finally {
+        window.location.href = '/';
+      }
     }
 
     // ---- Theme ----
@@ -621,10 +637,17 @@
     // ---- Mobile nav ----
     const burger = document.getElementById('nav-burger');
     const navLinks = document.getElementById('nav-links');
+    const logoutLink = document.getElementById('nav-logout');
     if (burger) {
       burger.addEventListener('click', () => {
         navLinks.classList.toggle('open');
         burger.classList.toggle('open');
+      });
+    }
+    if (logoutLink) {
+      logoutLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        logout();
       });
     }
 

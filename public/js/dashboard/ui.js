@@ -4,6 +4,12 @@
 (function () {
   'use strict';
 
+  function escapeHtml(value) {
+    var div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
+  }
+
   function toast(message, type) {
     type = type || 'info';
     var container = document.getElementById('toast-container');
@@ -17,11 +23,14 @@
     toastEl.className = 'toast toast--' + type;
     toastEl.innerHTML = [
       '<span class="toast__icon">' + (icons[type] || icons.info) + '</span>',
-      '<span class="toast__text">' + message + '</span>',
-      '<button class="toast__close" onclick="this.parentElement.remove()">',
+      '<span class="toast__text">' + escapeHtml(message) + '</span>',
+      '<button class="toast__close" type="button" aria-label="关闭提示">',
         '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>',
       '</button>',
     ].join('');
+    toastEl.querySelector('.toast__close').addEventListener('click', function () {
+      toastEl.remove();
+    });
     container.appendChild(toastEl);
     setTimeout(function () {
       toastEl.classList.add('toast--exiting');
@@ -89,14 +98,10 @@
     // 调用服务器端 logout 接口清除 httpOnly Cookie
     fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
       .then(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
         window.location.href = '/';
       })
       .catch(() => {
         // 即使 API 调用失败，也清除本地状态并跳转
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
         window.location.href = '/';
       });
   }
@@ -106,4 +111,5 @@
   window.hideSkeleton = hideSkeleton;
   window.showAlert = showAlert;
   window.logout = logout;
+  window.escapeHtml = escapeHtml;
 })();

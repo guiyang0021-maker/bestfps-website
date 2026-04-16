@@ -298,6 +298,80 @@ describe('POST /api/auth/change-password', () => {
       .send({ email, password: 'New@5678' });
     expect(newLoginRes.status).toBe(200);
   });
+
+  it('should keep the current session while revoking other sessions', async () => {
+    const user = await new Promise((resolve, reject) => {
+      testEnv.db.get('SELECT * FROM users WHERE email = ?', ['test@example.com'], (err, row) => {
+        if (err || !row) return reject(err || new Error('User not found'));
+        resolve(row);
+      });
+    });
+
+    const currentJti = 'current-session-jti';
+    const otherJti = 'other-session-jti';
+    const token = testEnv.reloaded.authMiddleware.generateToken(user, currentJti);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    testEnv.db._prepare(
+      'INSERT INTO user_sessions (user_id, jti, token_hash, expires_at) VALUES (?, ?, ?, ?)'
+    ).run(user.id, currentJti, 'hash-current', expiresAt);
+    testEnv.db._prepare(
+      'INSERT INTO user_sessions (user_id, jti, token_hash, expires_at) VALUES (?, ?, ?, ?)'
+    ).run(user.id, otherJti, 'hash-other', expiresAt);
+
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ old_password: 'Test@1234', new_password: 'New@5678' });
+
+    expect(res.status).toBe(200);
+
+    const sessions = testEnv.db._prepare(
+      'SELECT jti FROM user_sessions WHERE user_id = ? ORDER BY jti ASC'
+    ).all(user.id);
+    expect(sessions).toEqual([{ jti: currentJti }]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET/PUT /api/auth/profile
+// ---------------------------------------------------------------------------
+describe('GET/PUT /api/auth/profile', () => {
+  it('should return display_name in the profile payload', async () => {
+    testEnv.db._prepare('UPDATE users SET display_name = ? WHERE email = ?').run('Tester', 'test@example.com');
+    const token = await new Promise((resolve, reject) => {
+      testEnv.db.get('SELECT * FROM users WHERE email = ?', ['test@example.com'], (err, user) => {
+        if (err || !user) return reject(err || new Error('User not found'));
+        resolve(testEnv.reloaded.authMiddleware.generateToken(user, 'test-jti-' + user.id));
+      });
+    });
+
+    const res = await request(app)
+      .get('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.display_name).toBe('Tester');
+  });
+
+  it('should update username and display_name', async () => {
+    const token = await new Promise((resolve, reject) => {
+      testEnv.db.get('SELECT * FROM users WHERE email = ?', ['test@example.com'], (err, user) => {
+        if (err || !user) return reject(err || new Error('User not found'));
+        resolve(testEnv.reloaded.authMiddleware.generateToken(user, 'test-jti-' + user.id));
+      });
+    });
+
+    const res = await request(app)
+      .put('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ username: 'renameduser', display_name: 'Renamed User', bio: 'hello' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.username).toBe('renameduser');
+    expect(res.body.user.display_name).toBe('Renamed User');
+    expect(res.body.user.bio).toBe('hello');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -361,5 +435,28 @@ describe('DELETE /api/auth/sessions/:jti', () => {
   it('should reject unauthenticated requests', async () => {
     const res = await request(app).delete('/api/auth/sessions/some-jti');
     expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/auth/account
+// ---------------------------------------------------------------------------
+describe('DELETE /api/auth/account', () => {
+  it('should require password confirmation phrase in the same request to delete the account', async () => {
+    const token = await new Promise((resolve, reject) => {
+      testEnv.db.get('SELECT * FROM users WHERE email = ?', ['test@example.com'], (err, user) => {
+        if (err || !user) return reject(err || new Error('User not found'));
+        resolve(testEnv.reloaded.authMiddleware.generateToken(user, 'test-jti-' + user.id));
+      });
+    });
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'Test@1234', confirmation: 'DELETE MY ACCOUNT' });
+
+    expect(res.status).toBe(200);
+    const deletedUser = testEnv.db._prepare('SELECT id FROM users WHERE email = ?').get('test@example.com');
+    expect(deletedUser).toBeUndefined();
   });
 });

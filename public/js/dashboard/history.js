@@ -5,10 +5,12 @@
   'use strict';
 
   var currentPage = 1;
+  var currentTotalPages = 1;
 
   async function loadHistory(page) {
     if (page === undefined) page = 1;
     currentPage = page;
+    window.dashboardHistoryPage = currentPage;
     try {
       window.showSkeleton('history');
       var data = await window.api('GET', '/auth/login-history?page=' + page + '&limit=20');
@@ -25,6 +27,11 @@
     var table = document.getElementById('history-table');
     var empty = document.getElementById('history-empty');
     var pagination = document.getElementById('history-pagination');
+
+    currentPage = page;
+    currentTotalPages = totalPages;
+    window.dashboardHistoryPage = currentPage;
+    window.dashboardHistoryTotalPages = currentTotalPages;
 
     tbody.innerHTML = '';
     if (history.length === 0) {
@@ -57,4 +64,6 @@
 
   window.loadHistory = loadHistory;
   window.renderHistory = renderHistory;
+  window.getDashboardHistoryPage = function () { return currentPage; };
+  window.getDashboardHistoryTotalPages = function () { return currentTotalPages; };
 })();

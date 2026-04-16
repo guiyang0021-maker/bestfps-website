@@ -299,4 +299,20 @@ describe('GET /api/share', () => {
     expect(validShare.is_expired).toBeFalsy(); // null or false — non-expired shares should be falsy
     expect(expiredShare.is_expired).toBe(true);
   });
+
+  it('should support the legacy /api/share/my-links alias', async () => {
+    const token = await getToken();
+    await request(app)
+      .post('/api/share')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Alias Share' });
+
+    const res = await request(app)
+      .get('/api/share/my-links')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.shares)).toBe(true);
+    expect(res.body.shares[0].name).toBe('Alias Share');
+  });
 });

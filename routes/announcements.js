@@ -79,7 +79,7 @@ router.get('/:id', requireAuth, requireAdmin, (req, res) => {
     if (!row) {
       return res.status(404).json({ error: '公告不存在' });
     }
-    res.json(row);
+    res.json({ announcement: row });
   });
 });
 

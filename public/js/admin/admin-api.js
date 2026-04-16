@@ -19,7 +19,14 @@
         'X-CSRF-Token': token || '',
       },
     };
-    const merged = { ...defaultOpts, ...options };
+    const merged = {
+      ...defaultOpts,
+      ...options,
+      headers: {
+        ...defaultOpts.headers,
+        ...(options.headers || {}),
+      },
+    };
     // 避免重复请求（同一 URL + method 在 3s 内）
     const cacheKey = url + (merged.method || 'GET');
     const existing = inflight.get(cacheKey);
@@ -50,16 +57,27 @@
       inflight.delete(cacheKey);
     }
 
-    const data = await res.json().catch(() => ({ error: '响应解析失败' }));
+    if (res.status === 204) {
+      return {};
+    }
+
+    const rawText = await res.text();
+    let data = {};
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText);
+      } catch (_) {
+        data = { error: `接口返回了非 JSON 响应（${res.status}）` };
+      }
+    }
     if (!res.ok) {
-      if (res.status === 403) {
-        // 认证失败，跳转登录（避免已经在登录页时重复跳转）
+      if (res.status === 401) {
         if (!window.location.pathname.startsWith('/login')) {
           window.location.href = '/login';
         }
         return { __unauthorized: true };
       }
-      throw Object.assign(new Error(data.error || '请求失败'), { status: res.status });
+      throw Object.assign(new Error(data.error || '请求失败'), { status: res.status, data });
     }
     return data;
   }

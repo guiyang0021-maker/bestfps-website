@@ -51,6 +51,10 @@
     container = el;
     tableEl = container.querySelector('[data-table="users"]');
     paginationEl = container.querySelector('[data-pagination="users"]');
+    if (!tableEl || !paginationEl) {
+      console.error('[AdminUsers] Missing required DOM nodes');
+      return;
+    }
     debouncedSearch = createDebounce(search, 300);
 
     // 事件委托：表格操作按钮
@@ -96,16 +100,16 @@
 
     switch (action) {
       case 'detail':
-        openUserDetail(userId);
+        openUserDetail(userId, btn);
         break;
       case 'role':
-        openRoleModal(userId, userRole);
+        openRoleModal(userId, userRole, btn);
         break;
       case 'suspend':
-        openSuspendModal(userId, username, userStatus);
+        openSuspendModal(userId, username, userStatus, btn);
         break;
       case 'delete':
-        openDeleteModal(userId, username);
+        openDeleteModal(userId, username, btn);
         break;
     }
   }
@@ -115,7 +119,7 @@
     if (controller) controller.abort();
     controller = new AbortController();
 
-    showSkeleton(tableEl, { rows: 8, cols: 7 });
+    showSkeleton(tableEl, { rows: 8, cols: 8 });
     paginationEl.innerHTML = '';
 
     const params = new URLSearchParams({ page, search: searchQuery });
@@ -128,14 +132,17 @@
 
     try {
       const data = await apiFetch(`/api/admin/users?${params}`, { signal: controller.signal });
-      if (data.__aborted) return;
+      if (data.__aborted || data.__unauthorized) return;
+      if (!data || !Array.isArray(data.users)) {
+        throw new Error('用户数据格式无效');
+      }
       currentPage = data.page;
       renderTable(data.users, data.total, data.page, data.limit);
     } catch (err) {
       if (err.name !== 'AbortError') {
         tableEl.innerHTML = `
           <tr>
-            <td colspan="7" style="text-align:center;padding:40px;color:var(--color-text-muted)">
+            <td colspan="8" style="text-align:center;padding:40px;color:var(--color-text-muted)">
               <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32" style="opacity:0.4">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -154,7 +161,8 @@
 
   // ── 渲染表格 ──────────────────────────────────────────
   function renderTable(users, total, page, limit) {
-    const totalPages = Math.ceil(total / limit);
+    const safeLimit = Math.max(1, Number(limit) || 20);
+    const totalPages = Math.max(1, Math.ceil((Number(total) || 0) / safeLimit));
     const badgeTotal = total > 0 ? `共 ${total} 个用户` : '';
 
     // 更新总数字 badge
@@ -162,7 +170,7 @@
     if (badge) badge.textContent = badgeTotal;
 
     if (!users.length) {
-      tableEl.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--color-text-muted)">暂无用户</td></tr>';
+      tableEl.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--color-text-muted)">暂无用户</td></tr>';
     } else {
       tableEl.innerHTML = users.map(u => `
         <tr data-user-id="${u.id}">
@@ -171,6 +179,7 @@
           <td>${esc(u.email)}</td>
           <td><span class="badge badge--${u.role}">${esc(u.role)}</span></td>
           <td><span class="badge badge--${u.status}">${esc(u.status)}</span></td>
+          <td>${esc(u.last_login_ip || '—')}</td>
           <td>${esc(formatDate(u.created_at))}</td>
           <td>
             <div style="display:flex;gap:4px;flex-wrap:wrap">
@@ -185,23 +194,80 @@
     }
 
     renderPagination(paginationEl, {
-      page, totalPages,
+      page: Math.max(1, Number(page) || 1), totalPages,
       onChange: (p) => loadUsers(p),
     });
   }
 
+  function renderSessionList(sessions) {
+    if (!Array.isArray(sessions) || !sessions.length) {
+      return '<div class="detail-row"><span class="detail-label">活跃会话</span><span class="detail-value">暂无</span></div>';
+    }
+    return `
+      <div style="margin-top:16px">
+        <div style="font-weight:600;margin-bottom:8px">活跃会话</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${sessions.map((session) => `
+            <div style="padding:10px 12px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-2)">
+              <div style="font-size:13px;font-weight:600">${esc(session.browser || '未知浏览器')} / ${esc(session.os || '未知系统')}</div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px">${esc(session.device_type || '未知设备')} · ${esc(session.ip || '未知 IP')}</div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px">创建于 ${esc(formatDate(session.created_at))}，过期于 ${esc(formatDate(session.expires_at))}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderLoginHistory(history) {
+    if (!Array.isArray(history) || !history.length) {
+      return '<div style="margin-top:16px"><div style="font-weight:600;margin-bottom:8px">最近登录记录</div><div style="color:var(--color-text-muted);font-size:13px">暂无</div></div>';
+    }
+    return `
+      <div style="margin-top:16px">
+        <div style="font-weight:600;margin-bottom:8px">最近登录记录</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${history.map((item) => `
+            <div style="padding:10px 12px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface-2)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div style="font-size:13px;font-weight:600">${esc(item.browser || '未知浏览器')} / ${esc(item.os || '未知系统')}</div>
+                <span class="badge ${item.success ? 'badge-success' : 'badge-error'}">${item.success ? '成功' : '失败'}</span>
+              </div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px">${esc(item.device_type || '未知设备')} · ${esc(item.ip || '未知 IP')}</div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px">${esc(formatDate(item.created_at))}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   // ── 用户详情 ──────────────────────────────────────────
-  async function openUserDetail(userId) {
+  async function openUserDetail(userId, triggerEl) {
     const modal = document.getElementById('user-modal');
     const body = document.getElementById('modal-user-body');
     const title = document.getElementById('modal-user-title');
     body.innerHTML = '<p style="text-align:center;padding:40px;color:var(--color-text-muted)">加载中...</p>';
     if (title) title.textContent = '用户详情';
-    if (modal) modal.classList.add('modal-overlay--open');
+    if (modal && window.AdminCore) window.AdminCore.openModal(modal, triggerEl);
 
     try {
-      const user = await apiFetch(`/api/admin/users/${userId}`);
-      if (!user.id) throw new Error('用户不存在');
+      const [userResult, historyResult, sessionsResult] = await Promise.allSettled([
+        apiFetch(`/api/admin/users/${userId}`),
+        apiFetch(`/api/admin/login-history/${userId}?limit=5`),
+        apiFetch(`/api/admin/sessions/${userId}?limit=5`),
+      ]);
+      if (userResult.status !== 'fulfilled') {
+        throw userResult.reason || new Error('用户详情加载失败');
+      }
+      const data = userResult.value;
+      const historyData = historyResult.status === 'fulfilled' ? historyResult.value : { history: [] };
+      const sessionsData = sessionsResult.status === 'fulfilled' ? sessionsResult.value : { sessions: [] };
+      const user = data.user;
+      const stats = data.stats || {};
+      const history = Array.isArray(historyData.history) ? historyData.history : [];
+      const sessions = Array.isArray(sessionsData.sessions) ? sessionsData.sessions : [];
+      if (!user || !user.id) throw new Error('用户不存在');
 
       body.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:12px">
@@ -217,8 +283,18 @@
           <div class="detail-row"><span class="detail-label">状态</span><span class="detail-value"><span class="badge badge--${esc(user.status)}">${esc(user.status)}</span></span></div>
           <div class="detail-row"><span class="detail-label">邮箱验证</span><span class="detail-value">${user.verified ? '✓ 已验证' : '✗ 未验证'}</span></div>
           <div class="detail-row"><span class="detail-label">注册时间</span><span class="detail-value">${esc(formatDate(user.created_at))}</span></div>
+          <div class="detail-row"><span class="detail-label">最近登录 IP</span><span class="detail-value">${esc(user.last_login_ip || '—')}</span></div>
+          <div class="detail-row"><span class="detail-label">最近登录时间</span><span class="detail-value">${esc(user.last_login_at ? formatDate(user.last_login_at) : '—')}</span></div>
+          <div class="detail-row"><span class="detail-label">最近登录设备</span><span class="detail-value">${esc([user.last_login_browser || '未知浏览器', user.last_login_os || '未知系统', user.last_login_device_type || '未知设备'].join(' / '))}</span></div>
+          <div class="detail-row"><span class="detail-label">最近会话 IP</span><span class="detail-value">${esc(user.last_session_ip || '—')}</span></div>
+          <div class="detail-row"><span class="detail-label">下载次数</span><span class="detail-value">${esc(String(stats.downloads || 0))}</span></div>
+          <div class="detail-row"><span class="detail-label">预设数量</span><span class="detail-value">${esc(String(stats.presets || 0))}</span></div>
+          <div class="detail-row"><span class="detail-label">会话数量</span><span class="detail-value">${esc(String(stats.sessions || 0))}</span></div>
+          <div class="detail-row"><span class="detail-label">活动数量</span><span class="detail-value">${esc(String(stats.activities || 0))}</span></div>
           ${user.suspended_at ? `<div class="detail-row"><span class="detail-label">封禁时间</span><span class="detail-value">${esc(formatDate(user.suspended_at))}</span></div>` : ''}
           ${user.suspend_reason ? `<div class="detail-row"><span class="detail-label">封禁原因</span><span class="detail-value" style="color:var(--color-danger)">${esc(user.suspend_reason)}</span></div>` : ''}
+          ${renderSessionList(sessions)}
+          ${renderLoginHistory(history)}
         </div>
       `;
     } catch (e) {
@@ -227,15 +303,15 @@
   }
 
   // ── 角色修改 ──────────────────────────────────────────
-  function openRoleModal(userId, currentRole) {
+  function openRoleModal(userId, currentRole, triggerEl) {
     // Populate static modal fields and open static modal
     document.getElementById('role-user-id').value = userId;
     document.getElementById('role-new-role').value = currentRole;
-    document.getElementById('role-modal').classList.add('modal-overlay--open');
+    if (window.AdminCore) window.AdminCore.openModal('role-modal', triggerEl);
   }
 
   // ── 封禁/解封 ──────────────────────────────────────────
-  function openSuspendModal(userId, username, currentStatus) {
+  function openSuspendModal(userId, username, currentStatus, triggerEl) {
     const action = (currentStatus === 'suspended' || currentStatus === 'banned') ? 'unsuspend' : 'suspend';
     document.getElementById('suspend-user-id').value = userId;
     document.getElementById('suspend-action').value = action;
@@ -250,19 +326,18 @@
       confirmBtn.textContent = action === 'suspend' ? '确认封禁' : '确认解封';
       confirmBtn.className = action === 'suspend' ? 'btn btn-danger' : 'btn btn-warning';
     }
-    document.getElementById('suspend-modal').classList.add('modal-overlay--open');
+    if (window.AdminCore) window.AdminCore.openModal('suspend-modal', triggerEl);
   }
 
   // ── 删除用户 ──────────────────────────────────────────
-  function openDeleteModal(userId, username) {
+  function openDeleteModal(userId, username, triggerEl) {
     document.getElementById('delete-user-id').value = userId;
-    document.getElementById('delete-modal').classList.add('modal-overlay--open');
+    if (window.AdminCore) window.AdminCore.openModal('delete-modal', triggerEl);
   }
 
   // ── 关闭详情弹窗 ──────────────────────────────────────
   function closeUserModal() {
-    const modal = document.getElementById('user-modal');
-    if (modal) modal.classList.remove('modal-overlay--open');
+    if (window.AdminCore) window.AdminCore.closeModal('user-modal');
   }
 
   // ── 暴露到 window ─────────────────────────────────────

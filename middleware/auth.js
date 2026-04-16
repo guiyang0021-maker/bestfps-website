@@ -1,12 +1,47 @@
 /**
  * JWT 认证中间件
  */
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { db } = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'bestfps-super-secret-key-change-in-production';
+const JWT_SECRET = (() => {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET 未设置，生产环境禁止启动');
+  }
+  const fallbackSecret = crypto.randomBytes(32).toString('hex');
+  console.warn('[WARN] JWT_SECRET 未设置，当前使用进程级临时密钥。重启后所有会话都会失效。');
+  return fallbackSecret;
+})();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const JWT_COOKIE_NAME = 'bfps_token';
+const AUTH_STATE_SQL = `
+  SELECT
+    u.role,
+    u.status,
+    u.suspended_at,
+    u.suspend_reason,
+    CASE
+      WHEN ? = '' THEN 0
+      WHEN EXISTS (
+        SELECT 1
+        FROM user_sessions s
+        WHERE s.user_id = u.id
+          AND s.jti = ?
+          AND datetime(s.expires_at) > datetime('now')
+      ) THEN 1
+      WHEN EXISTS (
+        SELECT 1
+        FROM user_sessions s
+        WHERE s.user_id = u.id
+          AND s.jti = ?
+      ) THEN 0
+      ELSE 1
+    END AS session_valid
+  FROM users u
+  WHERE u.id = ?
+`;
 
 /**
  * 生成 JWT Token（支持 jti 和 role）
@@ -28,7 +63,7 @@ function tokenCookieOptions(maxAge) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: cookieMaxAge / 1000, // in seconds for express
+    maxAge: cookieMaxAge,
     path: '/',
   };
 }
@@ -38,23 +73,6 @@ function tokenCookieOptions(maxAge) {
  */
 function verifyToken(token) {
   return jwt.verify(token, JWT_SECRET);
-}
-
-/**
- * 检查会话是否已被吊销
- * 注意：如果 session 不存在，视为有效（旧 token 或首次登录场景）
- * 只有明确查询出错时才视为吊销
- */
-function isSessionRevoked(jti, callback) {
-  if (!jti) return callback(false);
-  db.get('SELECT id FROM user_sessions WHERE jti = ?', [jti], (err, session) => {
-    if (err) {
-      console.error('[Auth] Session check error:', err);
-      return callback(true); // 查询出错，保守处理
-    }
-    // session 不存在？可能是旧 token 或首次登录，视为有效
-    callback(false);
-  });
 }
 
 /**
@@ -86,37 +104,33 @@ function requireAuth(req, res, next) {
   try {
     const payload = verifyToken(token);
 
-    // 检查会话是否被吊销
-    isSessionRevoked(payload.jti, (revoked) => {
-      if (revoked) {
-        console.log('[Auth] Session revoked:', req.path, 'user_id:', payload.id, 'jti:', payload.jti ? payload.jti.slice(0,8) : 'none');
+    // 兼容历史 token：如果 user_sessions 中没有记录，仍按有效处理。
+    db.get(AUTH_STATE_SQL, [payload.jti || '', payload.jti || '', payload.jti || '', payload.id], (err, user) => {
+      if (err || !user) {
+        console.error('[Auth] User lookup error:', err || 'user not found', 'user_id:', payload.id);
+        return res.status(401).json({ error: '用户不存在' });
+      }
+      if (!user.session_valid) {
+        console.log('[Auth] Session revoked:', req.path, 'user_id:', payload.id, 'jti:', payload.jti ? payload.jti.slice(0, 8) : 'none');
         return res.status(401).json({ error: '会话已失效，请重新登录' });
       }
+      if (user.status === 'banned') {
+        console.log('[Auth] Banned user blocked:', req.path, 'user_id:', payload.id);
+        return res.status(403).json({ error: '账号已被永久封禁' });
+      }
+      if (user.status === 'suspended') {
+        const reason = user.suspend_reason ? `，原因：${user.suspend_reason}` : '';
+        console.log('[Auth] Suspended user blocked:', req.path, 'user_id:', payload.id);
+        return res.status(403).json({ error: `账号已被封禁${reason}` });
+      }
+      if (user.status !== 'active') {
+        console.log('[Auth] Inactive user blocked:', req.path, 'user_id:', payload.id, 'status:', user.status);
+        return res.status(403).json({ error: '账号状态异常，请联系管理员' });
+      }
 
-      // 检查用户账号状态
-      db.get('SELECT status, suspended_at, suspend_reason FROM users WHERE id = ?', [payload.id], (err, user) => {
-        if (err || !user) {
-          console.error('[Auth] User lookup error:', err || 'user not found', 'user_id:', payload.id);
-          return res.status(401).json({ error: '用户不存在' });
-        }
-        if (user.status === 'banned') {
-          console.log('[Auth] Banned user blocked:', req.path, 'user_id:', payload.id);
-          return res.status(403).json({ error: '账号已被永久封禁' });
-        }
-        if (user.status === 'suspended') {
-          const reason = user.suspend_reason ? `，原因：${user.suspend_reason}` : '';
-          console.log('[Auth] Suspended user blocked:', req.path, 'user_id:', payload.id);
-          return res.status(403).json({ error: `账号已被封禁${reason}` });
-        }
-        if (user.status !== 'active') {
-          console.log('[Auth] Inactive user blocked:', req.path, 'user_id:', payload.id, 'status:', user.status);
-          return res.status(403).json({ error: '账号状态异常，请联系管理员' });
-        }
-
-        req.user = payload;
-        req.token = token;
-        next();
-      });
+      req.user = { ...payload, role: user.role || payload.role || 'user' };
+      req.token = token;
+      next();
     });
   } catch (err) {
     console.log('[Auth] Token error:', req.path, err.name, err.message);
@@ -138,9 +152,9 @@ function optionalAuth(req, res, next) {
 
   try {
     const payload = verifyToken(token);
-    isSessionRevoked(payload.jti, (revoked) => {
-      if (!revoked) {
-        req.user = payload;
+    db.get(AUTH_STATE_SQL, [payload.jti || '', payload.jti || '', payload.jti || '', payload.id], (err, user) => {
+      if (!err && user && user.session_valid && user.status === 'active') {
+        req.user = { ...payload, role: user.role || payload.role || 'user' };
         req.token = token;
       }
       next();

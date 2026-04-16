@@ -288,8 +288,8 @@
       <p>从免费开始，如果需要更多功能，可以随时升级。所有方案均无隐藏费用。</p>
 
       <div class="pricing-toggle">
-        <button id="monthly-btn" class="active" onclick="setBilling('monthly')">按月付费</button>
-        <button id="yearly-btn" onclick="setBilling('yearly')">按年付费 <span style="background:var(--success);color:#fff;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:980px;">-33%</span></button>
+        <button id="monthly-btn" class="active" type="button">按月付费</button>
+        <button id="yearly-btn" type="button">按年付费 <span style="background:var(--success);color:#fff;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:980px;">-33%</span></button>
       </div>
     </section>
 
@@ -313,7 +313,7 @@
           <li><span class="x">✕</span> 高级统计</li>
           <li><span class="x">✕</span> 优先支持</li>
         </ul>
-        <button class="pricing-cta outline" onclick="window.location.href='/register'">免费注册</button>
+        <button class="pricing-cta outline" id="free-register-btn" type="button">免费注册</button>
       </div>
 
       <!-- Pro -->
@@ -335,7 +335,7 @@
           <li><span class="check">✓</span> 优先邮件支持</li>
           <li><span class="x">✕</span> Discord 专属频道</li>
         </ul>
-        <button class="pricing-cta primary" onclick="alert('支付功能即将上线，请联系 support@bestfps.com')">升级到专业版</button>
+        <button class="pricing-cta primary" id="pro-upgrade-btn" type="button">升级到专业版</button>
       </div>
 
       <!-- Team -->
@@ -357,7 +357,7 @@
           <li><span class="check">✓</span> Discord 专属频道</li>
           <li><span class="check">✓</span> 发票开具</li>
         </ul>
-        <button class="pricing-cta outline" onclick="alert('团队版需联系销售，请邮件 support@bestfps.com')">联系销售</button>
+        <button class="pricing-cta outline" id="team-contact-btn" type="button">联系销售</button>
       </div>
     </div>
 
@@ -554,6 +554,18 @@
       document.getElementById('team-period').textContent = isYearly ? '/ 月' : '/ 月';
       document.getElementById('team-original').style.display = isYearly ? 'inline' : 'none';
     }
+
+    document.getElementById('monthly-btn')?.addEventListener('click', () => setBilling('monthly'));
+    document.getElementById('yearly-btn')?.addEventListener('click', () => setBilling('yearly'));
+    document.getElementById('free-register-btn')?.addEventListener('click', () => {
+      window.location.href = '/register';
+    });
+    document.getElementById('pro-upgrade-btn')?.addEventListener('click', () => {
+      window.alert('支付功能即将上线，请联系 support@bestfps.com');
+    });
+    document.getElementById('team-contact-btn')?.addEventListener('click', () => {
+      window.alert('团队版需联系销售，请邮件 support@bestfps.com');
+    });
 
     // Accordion
     document.querySelectorAll('.accordion-trigger').forEach(trigger => {

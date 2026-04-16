@@ -19,6 +19,7 @@
   function renderShares(shares) {
     var list = document.getElementById('share-list');
     var empty = document.getElementById('share-empty');
+    var escapeHtml = window.escapeHtml || function (value) { return value == null ? '' : String(value); };
     list.innerHTML = '';
     var active = shares.filter(function (s) { return !s.is_expired; });
     if (active.length === 0) {
@@ -33,15 +34,37 @@
       item.className = 'share-item';
       item.innerHTML = [
         '<div class="share-item__info">',
-          '<strong>' + s.name + '</strong>',
-          '<span>' + (s.description || '无描述') + ' · ' + new Date(s.created_at).toLocaleDateString('zh-CN') + '</span>',
+          '<strong>' + escapeHtml(s.name) + '</strong>',
+          '<span>' + escapeHtml(s.description || '无描述') + ' · ' + new Date(s.created_at).toLocaleDateString('zh-CN') + '</span>',
         '</div>',
         '<div class="share-item__actions">',
-          '<button class="btn btn-secondary btn-sm" onclick="copyShareLink(\'' + s.token + '\')">复制链接</button>',
-          '<button class="btn btn-ghost btn-sm" onclick="deleteShare(\'' + s.token + '\')" style="color:var(--error);">删除</button>',
+          '<button class="btn btn-secondary btn-sm" type="button" data-share-action="copy" data-share-token="' + escapeHtml(s.token) + '">复制链接</button>',
+          '<button class="btn btn-ghost btn-sm" type="button" data-share-action="delete" data-share-token="' + escapeHtml(s.token) + '" style="color:var(--error);">删除</button>',
         '</div>',
       ].join('');
       list.appendChild(item);
+    });
+  }
+
+  function focusShareComposer() {
+    var input = document.getElementById('share-name');
+    if (!input) return;
+    input.scrollIntoView({ block: 'center' });
+    input.focus();
+  }
+
+  function bindShareActions() {
+    var list = document.getElementById('share-list');
+    if (!list || list.dataset.bound === 'true') return;
+    list.dataset.bound = 'true';
+    list.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-share-action]');
+      if (!button) return;
+      var token = button.getAttribute('data-share-token');
+      var action = button.getAttribute('data-share-action');
+      if (!token) return;
+      if (action === 'copy') copyShareLink(token);
+      if (action === 'delete') deleteShare(token);
     });
   }
 
@@ -89,4 +112,6 @@
   window.createShare = createShare;
   window.copyShareLink = copyShareLink;
   window.deleteShare = deleteShare;
+  window.focusShareComposer = focusShareComposer;
+  bindShareActions();
 })();

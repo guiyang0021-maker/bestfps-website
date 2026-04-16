@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>登录 — bestfps</title>
   <script>
-    const saved = localStorage.getItem('theme') || 'system';
-    if (saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.setAttribute('data-theme', 'dark');
+    try {
+      const saved = localStorage.getItem('theme') || 'system';
+      if (saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    } catch (_) {
+      document.documentElement.setAttribute('data-theme', 'light');
     }
   </script>
   <link rel="stylesheet" href="/css/themes.css" />
@@ -39,8 +43,8 @@
       <h1 class="auth-title">登录 bestfps</h1>
       <p class="auth-subtitle">还没有账号？<a href="/register">立即注册</a></p>
 
-      <div id="alert-success" class="alert alert-success"></div>
-      <div id="alert-error"   class="alert alert-error"></div>
+      <div id="alert-success" class="alert alert-success" role="status" aria-live="polite"></div>
+      <div id="alert-error"   class="alert alert-error" role="alert" aria-live="assertive"></div>
 
       <form id="login-form" novalidate>
         <div class="form-group">
@@ -51,9 +55,11 @@
             type="email"
             placeholder="your@email.com"
             autocomplete="email"
+            aria-describedby="email-error"
+            aria-invalid="false"
             required
           />
-          <p id="email-error" class="form-error"></p>
+          <p id="email-error" class="form-error" aria-live="polite"></p>
         </div>
 
         <div class="form-group">
@@ -64,9 +70,11 @@
             type="password"
             placeholder="输入密码"
             autocomplete="current-password"
+            aria-describedby="password-error"
+            aria-invalid="false"
             required
           />
-          <p id="password-error" class="form-error"></p>
+          <p id="password-error" class="form-error" aria-live="polite"></p>
         </div>
 
         <div class="form-group" style="text-align:right; margin-bottom:20px;">
@@ -88,22 +96,50 @@
     async function api(method, path, body) {
       const res = await fetch(API + path, {
         method,
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || '请求失败');
       return data;
     }
 
-    function show(id, html) {
+    function show(id, message, allowHtml = false) {
       const el = document.getElementById(id);
-      el.innerHTML = html;
+      if (allowHtml) {
+        el.innerHTML = message;
+      } else {
+        el.textContent = message;
+      }
       el.classList.add('visible');
     }
     function hide(id) {
       const el = document.getElementById(id);
+      el.textContent = '';
       el.classList.remove('visible');
+    }
+
+    function setFieldError(inputId, errorId, message) {
+      const input = document.getElementById(inputId);
+      const error = document.getElementById(errorId);
+      input.classList.add('error');
+      input.setAttribute('aria-invalid', 'true');
+      error.textContent = message;
+      error.classList.add('visible');
+    }
+
+    function clearFieldError(inputId, errorId) {
+      const input = document.getElementById(inputId);
+      const error = document.getElementById(errorId);
+      input.classList.remove('error');
+      input.setAttribute('aria-invalid', 'false');
+      error.textContent = '';
+      error.classList.remove('visible');
+    }
+
+    function isValidEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
     }
 
     // ---- Real-time validation ----
@@ -112,22 +148,16 @@
 
     emailInput.addEventListener('input', () => {
       const val = emailInput.value.trim();
-      if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-        emailInput.classList.add('error');
-        document.getElementById('email-error').textContent = '邮箱格式不正确';
-        document.getElementById('email-error').classList.add('visible');
+      if (val && !isValidEmail(val)) {
+        setFieldError('email', 'email-error', '邮箱格式不正确');
       } else {
-        emailInput.classList.remove('error');
-        document.getElementById('email-error').textContent = '';
-        document.getElementById('email-error').classList.remove('visible');
+        clearFieldError('email', 'email-error');
       }
     });
 
     passwordInput.addEventListener('input', () => {
       if (passwordInput.value) {
-        passwordInput.classList.remove('error');
-        document.getElementById('password-error').textContent = '';
-        document.getElementById('password-error').classList.remove('visible');
+        clearFieldError('password', 'password-error');
       }
     });
 
@@ -142,36 +172,35 @@
       const btnText  = document.getElementById('btn-text');
 
       // 清除旧错误
-      document.querySelectorAll('.form-error').forEach(el => { el.textContent = ''; el.classList.remove('visible'); });
-      document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
+      clearFieldError('email', 'email-error');
+      clearFieldError('password', 'password-error');
 
       let hasError = false;
       if (!email) {
-        document.getElementById('email-error').textContent = '请输入邮箱';
-        document.getElementById('email-error').classList.add('visible');
-        document.getElementById('email').classList.add('error');
+        setFieldError('email', 'email-error', '请输入邮箱');
+        hasError = true;
+      } else if (!isValidEmail(email)) {
+        setFieldError('email', 'email-error', '邮箱格式不正确');
         hasError = true;
       }
       if (!password) {
-        document.getElementById('password-error').textContent = '请输入密码';
-        document.getElementById('password-error').classList.add('visible');
-        document.getElementById('password').classList.add('error');
+        setFieldError('password', 'password-error', '请输入密码');
         hasError = true;
       }
       if (hasError) return;
 
       btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
       btnText.innerHTML = '<span class="spinner"></span>';
 
       try {
-        const data = await api('POST', '/login', { email, password });
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        show('alert-success', '<strong>登录成功！</strong> 正在跳转到控制面板…');
+        await api('POST', '/login', { email, password });
+        show('alert-success', '登录成功，正在跳转到控制面板…');
         setTimeout(() => { window.location.href = '/dashboard'; }, 800);
       } catch (err) {
-        show('alert-error', err.message);
+        show('alert-error', err.message || '登录失败，请稍后重试');
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
         btnText.textContent = '登录';
       }
     });

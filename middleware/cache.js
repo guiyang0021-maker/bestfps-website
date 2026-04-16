@@ -32,7 +32,9 @@ function cached(ttlSeconds) {
     // 拦截 res.json，在响应时缓存数据
     const originalJson = res.json.bind(res);
     res.json = (data) => {
-      cache.set(key, data, ttlSeconds || 300);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        cache.set(key, data, ttlSeconds || 300);
+      }
       return originalJson(data);
     };
 

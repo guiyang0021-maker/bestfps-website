@@ -40,6 +40,7 @@ function createTestDb() {
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
+      display_name TEXT DEFAULT '',
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       avatar TEXT,

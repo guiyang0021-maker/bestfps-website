@@ -7,7 +7,7 @@
 
   // ---- Auth helpers ----
   function authHeaders() {
-    return { 'Authorization': 'Bearer ' + localStorage.getItem('token') };
+    return {};
   }
 
   async function api(method, path, body, skipAuth) {
@@ -21,15 +21,11 @@
       body: body ? JSON.stringify(body) : undefined,
     });
     if (res.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
       window.location.href = '/login';
       throw new Error('会话已失效，请重新登录');
     }
     if (res.status === 403) {
       const errData = await res.json().catch(() => ({}));
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
       alert(errData.error || '账号已被封禁，请联系管理员');
       window.location.href = '/login';
       throw new Error(errData.error || '账号已被封禁');

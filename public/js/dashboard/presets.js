@@ -19,6 +19,7 @@
   function renderPresets(presets) {
     var grid = document.getElementById('presets-grid');
     var empty = document.getElementById('presets-empty');
+    var escapeHtml = window.escapeHtml || function (value) { return value == null ? '' : String(value); };
     grid.innerHTML = '';
     if (presets.length === 0) {
       empty.style.display = 'flex';
@@ -32,20 +33,36 @@
       card.className = 'preset-card' + (p.is_default ? ' preset-card--default' : '');
       card.innerHTML = [
         '<div class="preset-card__header">',
-          '<div class="preset-card__name">' + p.name + '</div>',
+          '<div class="preset-card__name">' + escapeHtml(p.name) + '</div>',
           (p.is_default ? '<span class="preset-card__badge">默认</span>' : ''),
         '</div>',
-        '<p class="preset-card__desc">' + (p.description || '无描述') + '</p>',
+        '<p class="preset-card__desc">' + escapeHtml(p.description || '无描述') + '</p>',
         '<div class="preset-card__meta">',
           '<span>' + new Date(p.created_at).toLocaleDateString('zh-CN') + '</span>',
         '</div>',
         '<div class="preset-card__actions">',
-          '<button class="btn btn-primary btn-sm" onclick="applyPreset(' + p.id + ')">应用</button>',
-          (!p.is_default ? '<button class="btn btn-secondary btn-sm" onclick="setDefaultPreset(' + p.id + ')">设为默认</button>' : ''),
-          '<button class="btn btn-ghost btn-sm" onclick="deletePreset(' + p.id + ')" style="color:var(--error);">删除</button>',
+          '<button class="btn btn-primary btn-sm" type="button" data-preset-action="apply" data-preset-id="' + p.id + '">应用</button>',
+          (!p.is_default ? '<button class="btn btn-secondary btn-sm" type="button" data-preset-action="default" data-preset-id="' + p.id + '">设为默认</button>' : ''),
+          '<button class="btn btn-ghost btn-sm" type="button" data-preset-action="delete" data-preset-id="' + p.id + '" style="color:var(--error);">删除</button>',
         '</div>',
       ].join('');
       grid.appendChild(card);
+    });
+  }
+
+  function bindPresetActions() {
+    var grid = document.getElementById('presets-grid');
+    if (!grid || grid.dataset.bound === 'true') return;
+    grid.dataset.bound = 'true';
+    grid.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-preset-action]');
+      if (!button) return;
+      var id = parseInt(button.getAttribute('data-preset-id'), 10);
+      var action = button.getAttribute('data-preset-action');
+      if (!id) return;
+      if (action === 'apply') applyPreset(id);
+      if (action === 'default') setDefaultPreset(id);
+      if (action === 'delete') deletePreset(id);
     });
   }
 
@@ -149,4 +166,5 @@
   window.applyPreset = applyPreset;
   window.setDefaultPreset = setDefaultPreset;
   window.deletePreset = deletePreset;
+  bindPresetActions();
 })();

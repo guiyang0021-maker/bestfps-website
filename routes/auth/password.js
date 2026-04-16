@@ -119,11 +119,9 @@ function setup(router) {
             return res.status(500).json({ error: '服务器内部错误' });
           }
           // 吊销所有其他会话（保留当前会话）
-          const rawToken = req.headers.authorization?.slice(7) || '';
-          const currentTokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
           db.run(
-            'DELETE FROM user_sessions WHERE user_id = ? AND token_hash != ?',
-            [req.user.id, currentTokenHash],
+            'DELETE FROM user_sessions WHERE user_id = ? AND jti != ?',
+            [req.user.id, req.user.jti || ''],
             (err) => {
               if (err) console.error('[Auth/Password] Revoke sessions error:', err);
             }

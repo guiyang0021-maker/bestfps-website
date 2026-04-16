@@ -15,9 +15,9 @@
 
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Placeholder user data — server will inject real data; read by AdminCore -->
+  <!-- AdminCore will fetch current user from /api/auth/me -->
   <script id="current-user-data" type="application/json">
-{"id":1,"username":"admin","role":"admin"}
+{}
 </script>
 
   <!-- ========== Top Nav ========== -->
@@ -27,10 +27,10 @@
       <span class="dash-nav__sub">管理后台</span>
       <div class="dash-nav__right">
         <div class="theme-switcher" id="theme-switcher">
-          <button class="theme-btn" data-theme="light" title="浅色模式">
+          <button class="theme-btn" type="button" data-theme="light" title="浅色模式" aria-label="切换到浅色模式" aria-pressed="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           </button>
-          <button class="theme-btn" data-theme="dark" title="深色模式">
+          <button class="theme-btn" type="button" data-theme="dark" title="深色模式" aria-label="切换到深色模式" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </button>
         </div>
@@ -72,12 +72,15 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/></svg>
           <span>公告管理</span>
         </a>
+        <a class="sidebar-nav__item nav-item" data-view="invoices">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg>
+          <span>开票管理</span>
+        </a>
       </nav>
     </aside>
 
     <!-- Content -->
     <main class="dash-content" id="dash-content">
-
       <!-- ===== STATS / OVERVIEW ===== -->
       <div id="stats-view">
       <section class="dash-section active" id="section-overview">
@@ -162,7 +165,8 @@
             <h2 class="dash-card__title">用户增长趋势</h2>
             <span class="dash-card__badge" id="growth-period-label">近 7 天</span>
           </div>
-          <div class="growth-chart" id="growth-chart">
+          <p id="growth-chart-description" class="sr-only" aria-live="polite">最近 7 天用户增长趋势图，正在加载。</p>
+          <div class="growth-chart" id="growth-chart" role="img" aria-describedby="growth-chart-description">
             <div class="growth-chart__bars" id="growth-bars">
               <div class="growth-chart__loading">加载中...</div>
             </div>
@@ -252,12 +256,13 @@
                   <th>邮箱</th>
                   <th>角色</th>
                   <th>状态</th>
+                  <th>最近登录 IP</th>
                   <th>注册时间</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody id="users-body" data-table="users">
-                <tr><td colspan="7" class="table-empty">加载中...</td></tr>
+                <tr><td colspan="8" class="table-empty">加载中...</td></tr>
               </tbody>
             </table>
           </div>
@@ -302,15 +307,79 @@
       </section>
       </div><!-- /announcements-view -->
 
+      <!-- ===== INVOICES ===== -->
+      <div id="invoices-view" style="display:none">
+      <section class="dash-section" id="section-invoices">
+        <div class="dash-page-header">
+          <h1 class="dash-page-title">开票管理</h1>
+          <span class="dash-card__badge" id="invoices-total-badge">—</span>
+        </div>
+
+        <div class="dash-card filters-card">
+          <div class="filters-row">
+            <div class="filter-group">
+              <label class="filter-label">搜索</label>
+              <input type="text" class="filter-input" id="invoice-search" placeholder="订单号 / 抬头 / 邮箱 / 用户名" />
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">状态</label>
+              <select class="filter-input" id="invoice-status-filter">
+                <option value="">全部</option>
+                <option value="pending">待处理</option>
+                <option value="issued">已开票</option>
+                <option value="rejected">已驳回</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">票种</label>
+              <select class="filter-input" id="invoice-type-filter">
+                <option value="">全部</option>
+                <option value="personal_normal">个人普通发票</option>
+                <option value="company_normal">企业普通发票</option>
+                <option value="company_special_vat">企业增值税专用发票</option>
+                <option value="company_electronic">企业电子发票</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>订单号</th>
+                  <th>用户</th>
+                  <th>抬头</th>
+                  <th>票种</th>
+                  <th>金额</th>
+                  <th>状态</th>
+                  <th>申请时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="invoice-body" data-table="invoices">
+                <tr><td colspan="9" class="table-empty">加载中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="pagination" id="invoice-pagination" data-pagination="invoices"></div>
+      </section>
+      </div><!-- /invoices-view -->
+
     </main>
   </div>
 
   <!-- ========== Announcement Modal ========== -->
-  <div class="modal-overlay" id="announcement-modal">
-    <div class="modal">
+  <div class="modal-overlay" id="announcement-modal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="announcement-modal-title" tabindex="-1">
       <div class="modal__header">
         <h3 class="modal__title" id="announcement-modal-title">发布公告</h3>
-        <button class="modal__close" onclick="AdminAnnouncements && AdminAnnouncements.closeModal()" aria-label="关闭">
+        <button class="modal__close" type="button" data-modal-close="announcement-modal" aria-label="关闭">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -333,24 +402,32 @@
             </select>
           </div>
           <div class="form-group">
+            <label class="form-label" for="ann-start-at">开始时间</label>
+            <input type="datetime-local" class="form-input" id="ann-start-at" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ann-expires-at">有效期截止</label>
+            <input type="datetime-local" class="form-input" id="ann-expires-at" />
+          </div>
+          <div class="form-group">
             <label class="form-label">内容 <span class="form-required">*</span></label>
             <textarea class="form-textarea" id="ann-content" rows="4" required placeholder="公告内容，支持多行文本"></textarea>
           </div>
         </form>
       </div>
       <div class="modal__footer">
-        <button type="button" class="btn btn-ghost" id="close-announcement-modal">取消</button>
+        <button type="button" class="btn btn-ghost" id="close-announcement-modal" data-modal-close="announcement-modal">取消</button>
         <button type="button" class="btn btn-primary" id="save-announcement-btn">保存公告</button>
       </div>
     </div>
   </div>
 
   <!-- ========== User Detail Modal ========== -->
-  <div class="modal-overlay" id="user-modal">
-    <div class="modal">
+  <div class="modal-overlay" id="user-modal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-user-title" tabindex="-1">
       <div class="modal__header">
         <h3 class="modal__title" id="modal-user-title">用户详情</h3>
-        <button class="modal__close" aria-label="关闭">
+        <button class="modal__close" aria-label="关闭" data-modal-close="user-modal">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -364,11 +441,11 @@
   </div>
 
   <!-- ========== Suspend Modal ========== -->
-  <div class="modal-overlay" id="suspend-modal">
-    <div class="modal modal--sm">
+  <div class="modal-overlay" id="suspend-modal" aria-hidden="true">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="suspend-modal-title" tabindex="-1">
       <div class="modal__header">
         <h3 class="modal__title" id="suspend-modal-title">封禁用户</h3>
-        <button class="modal__close" aria-label="关闭">
+        <button class="modal__close" aria-label="关闭" data-modal-close="suspend-modal">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -389,11 +466,11 @@
   </div>
 
   <!-- ========== Role Modal ========== -->
-  <div class="modal-overlay" id="role-modal">
-    <div class="modal modal--sm">
+  <div class="modal-overlay" id="role-modal" aria-hidden="true">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="role-modal-title" tabindex="-1">
       <div class="modal__header">
-        <h3 class="modal__title">修改用户角色</h3>
-        <button class="modal__close" aria-label="关闭">
+        <h3 class="modal__title" id="role-modal-title">修改用户角色</h3>
+        <button class="modal__close" aria-label="关闭" data-modal-close="role-modal">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -417,11 +494,11 @@
   </div>
 
   <!-- ========== Delete Modal ========== -->
-  <div class="modal-overlay" id="delete-modal">
-    <div class="modal modal--sm">
+  <div class="modal-overlay" id="delete-modal" aria-hidden="true">
+    <div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" tabindex="-1">
       <div class="modal__header">
-        <h3 class="modal__title" style="color:var(--error);">删除用户</h3>
-        <button class="modal__close" aria-label="关闭">
+        <h3 class="modal__title" id="delete-modal-title" style="color:var(--error);">删除用户</h3>
+        <button class="modal__close" aria-label="关闭" data-modal-close="delete-modal">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -437,22 +514,263 @@
     </div>
   </div>
 
+  <!-- ========== Invoice Modal ========== -->
+  <div class="modal-overlay" id="invoice-modal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="invoice-modal-title" tabindex="-1">
+      <div class="modal__header">
+        <h3 class="modal__title" id="invoice-modal-title">处理开票申请</h3>
+        <button class="modal__close" aria-label="关闭" data-modal-close="invoice-modal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <input type="hidden" id="invoice-id" />
+        <div id="invoice-meta" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text-secondary);"></div>
+        <div class="form-group">
+          <label class="form-label">处理状态</label>
+          <select class="form-input" id="invoice-admin-status">
+            <option value="pending">待处理</option>
+            <option value="issued">已开票</option>
+            <option value="rejected">已驳回</option>
+            <option value="cancelled">已取消</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">发票号</label>
+          <input class="form-input" id="invoice-admin-no" type="text" maxlength="80" placeholder="开票完成时填写" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">下载链接</label>
+          <input class="form-input" id="invoice-admin-download-url" type="url" maxlength="500" placeholder="可选，发票 PDF 下载地址" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">管理员备注</label>
+          <textarea class="form-textarea" id="invoice-admin-note" rows="3" maxlength="500" placeholder="填写处理说明"></textarea>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn-ghost" data-modal-close="invoice-modal">取消</button>
+        <button class="btn btn-primary" id="invoice-confirm-btn">保存处理结果</button>
+      </div>
+    </div>
+  </div>
+
 <!-- DOMPurify for XSS sanitization -->
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-<script src="/js/admin/admin-utils.js"></script>
-<script src="/js/admin/admin-api.js"></script>
-<script src="/js/admin/admin-ui.js"></script>
-<script src="/js/admin/admin-core.js"></script>
-<script src="/js/admin/admin-users.js"></script>
-<script src="/js/admin/admin-announcements.js"></script>
-<script src="/js/admin/admin-stats.js"></script>
+<script src="/js/admin/admin-utils.js?v=20260417d"></script>
+<script src="/js/admin/admin-api.js?v=20260417d"></script>
+<script src="/js/admin/admin-ui.js?v=20260417d"></script>
+<script src="/js/admin/admin-core.js?v=20260417d"></script>
+<script src="/js/admin/admin-users.js?v=20260417d"></script>
+<script src="/js/admin/admin-announcements.js?v=20260417d"></script>
+<script src="/js/admin/admin-stats.js?v=20260417d"></script>
+<script src="/js/admin/admin-invoices.js?v=20260417d"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    async function fetchJson(url, options) {
+      const response = await fetch(url, Object.assign({
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      }, options || {}));
+      const data = await response.json().catch(function() { return null; });
+      if (!response.ok) {
+        throw new Error((data && data.error) || ('请求失败: ' + response.status));
+      }
+      return data;
+    }
+
+    function setText(id, value) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    function esc(value) {
+      var div = document.createElement('div');
+      div.textContent = value == null ? '' : String(value);
+      return div.innerHTML;
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      var date = new Date(value);
+      if (isNaN(date.getTime())) return String(value);
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function renderUsersFallback(data) {
+      var usersBody = document.getElementById('users-body');
+      var recentUsersBody = document.getElementById('recent-users-body');
+      var badge = document.getElementById('users-total-badge');
+      var users = (data && data.users) || [];
+      var total = data && typeof data.total === 'number' ? data.total : users.length;
+
+      if (badge) badge.textContent = total ? ('共 ' + total + ' 个用户') : '0';
+
+      if (usersBody) {
+        if (!users.length) {
+          usersBody.innerHTML = '<tr><td colspan="7" class="table-empty">暂无用户</td></tr>';
+        } else {
+          usersBody.innerHTML = users.map(function(u) {
+            return (
+              '<tr data-user-id="' + esc(u.id) + '">' +
+                '<td><span style="color:var(--text-secondary);font-size:13px">' + esc(u.id) + '</span></td>' +
+                '<td><strong>' + esc(u.username) + '</strong></td>' +
+                '<td>' + esc(u.email) + '</td>' +
+                '<td><span class="badge badge--' + esc(u.role) + '">' + esc(u.role) + '</span></td>' +
+                '<td><span class="badge badge--' + esc(u.status) + '">' + esc(u.status) + '</span></td>' +
+                '<td>' + esc(formatDate(u.created_at)) + '</td>' +
+                '<td>' +
+                  '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
+                    '<button class="btn btn--small" type="button" data-action="detail" data-user-id="' + esc(u.id) + '">详情</button>' +
+                    '<button class="btn btn--small" type="button" data-action="role" data-user-id="' + esc(u.id) + '">角色</button>' +
+                    '<button class="btn btn--small ' + ((u.status === 'suspended' || u.status === 'banned') ? 'btn--success' : 'btn--warning') + '" type="button" data-action="suspend" data-user-id="' + esc(u.id) + '">' + ((u.status === 'suspended' || u.status === 'banned') ? '解封' : '封禁') + '</button>' +
+                    '<button class="btn btn--small btn--danger" type="button" data-action="delete" data-user-id="' + esc(u.id) + '">删除</button>' +
+                  '</div>' +
+                '</td>' +
+              '</tr>'
+            );
+          }).join('');
+        }
+      }
+
+      if (recentUsersBody) {
+        if (!users.length) {
+          recentUsersBody.innerHTML = '<tr><td colspan="5" class="table-empty">暂无数据</td></tr>';
+        } else {
+          recentUsersBody.innerHTML = users.slice(0, 10).map(function(u) {
+            return (
+              '<tr>' +
+                '<td>' + esc(u.username) + '</td>' +
+                '<td>' + esc(u.email) + '</td>' +
+                '<td>' + esc(u.role) + '</td>' +
+                '<td>' + esc(u.status) + '</td>' +
+                '<td>' + esc(formatDate(u.created_at)) + '</td>' +
+              '</tr>'
+            );
+          }).join('');
+        }
+      }
+    }
+
+    function renderStatsFallback(data) {
+      if (!data || !data.users) return;
+      setText('stat-total-users', data.users.total || 0);
+      setText('stat-active-users', data.users.active || 0);
+      setText('stat-suspended-users', data.users.suspended || 0);
+      setText('stat-verified-users', data.users.verified || 0);
+      setText('stat-today-users', data.users.today || 0);
+      setText('stat-total-dl', data.downloads || 0);
+      setText('stat-presets', data.presets || 0);
+    }
+
+    function renderAnnouncementsFallback(data) {
+      var body = document.getElementById('ann-body');
+      var list = (data && data.announcements) || [];
+      if (!body) return;
+      if (!list.length) {
+        body.innerHTML = '<tr><td colspan="6" class="table-empty">暂无公告</td></tr>';
+        return;
+      }
+      body.innerHTML = list.map(function(a) {
+        return (
+          '<tr>' +
+            '<td>' + esc(a.priority || 0) + '</td>' +
+            '<td>' + esc(a.title) + '</td>' +
+            '<td><span class="badge badge--' + esc(a.type || 'info') + '">' + esc(a.type || 'info') + '</span></td>' +
+            '<td>' + esc(a.expires_at ? formatDate(a.expires_at) : '长期有效') + '</td>' +
+            '<td>' + esc(formatDate(a.created_at)) + '</td>' +
+            '<td>' +
+              '<div style="display:flex;gap:4px">' +
+                '<button class="btn btn--small" type="button" data-action="edit" data-id="' + esc(a.id) + '">编辑</button>' +
+                '<button class="btn btn--small btn--danger" type="button" data-action="delete" data-id="' + esc(a.id) + '" data-title="' + esc(a.title) + '">删除</button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>'
+        );
+      }).join('');
+    }
+
+    function renderActivitiesFallback(data) {
+      var feed = document.getElementById('activity-feed');
+      var activities = (data && data.activities) || [];
+      if (!feed) return;
+      if (!activities.length) {
+        feed.innerHTML = '<div class="activity-empty">暂无数据</div>';
+        return;
+      }
+      feed.innerHTML = activities.map(function(a) {
+        return (
+          '<div style="padding:8px 0;border-bottom:1px solid var(--border-light);font-size:13px">' +
+            '<strong>' + esc(a.username || '系统') + '</strong> · ' + esc(a.event_type) + ' · ' + esc(a.description) + ' <span style="color:var(--text-secondary)">' + esc(formatDate(a.created_at)) + '</span>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    function renderGrowthFallback(data) {
+      var bars = document.getElementById('growth-bars');
+      var desc = document.getElementById('growth-chart-description');
+      var rows = (data && data.registrations) || [];
+      if (!bars) return;
+      if (!rows.length) {
+        bars.innerHTML = '<div class="growth-chart__loading">暂无数据</div>';
+        if (desc) desc.textContent = '最近 7 天暂无注册数据。';
+        return;
+      }
+      var max = 1;
+      rows.forEach(function(row) {
+        var count = Number(row.count) || 0;
+        if (count > max) max = count;
+      });
+      if (desc) {
+        desc.textContent = '最近 7 天注册趋势：' + rows.map(function(row) {
+          return String(row.date).slice(5) + ' 注册 ' + row.count + ' 人';
+        }).join('，') + '。';
+      }
+      bars.innerHTML = rows.map(function(row) {
+        var count = Number(row.count) || 0;
+        var height = Math.max(12, Math.round((count / max) * 120));
+        return (
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:1">' +
+            '<div style="font-size:12px;color:var(--text-secondary)">' + esc(count) + '</div>' +
+            '<div style="width:100%;max-width:36px;height:' + height + 'px;border-radius:12px 12px 6px 6px;background:linear-gradient(180deg,var(--accent),rgba(0,113,227,0.35));"></div>' +
+            '<div style="font-size:12px;color:var(--text-secondary)">' + esc(String(row.date).slice(5)) + '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    async function bootstrapFallbackData() {
+      try {
+        var results = await Promise.allSettled([
+          fetchJson('/api/admin/stats'),
+          fetchJson('/api/admin/users?limit=20'),
+          fetchJson('/api/announcements/all'),
+          fetchJson('/api/admin/activities?limit=20'),
+          fetchJson('/api/admin/stats/registrations?days=7')
+        ]);
+
+        if (results[0].status === 'fulfilled') renderStatsFallback(results[0].value);
+        if (results[1].status === 'fulfilled') renderUsersFallback(results[1].value);
+        if (results[2].status === 'fulfilled') renderAnnouncementsFallback(results[2].value);
+        if (results[3].status === 'fulfilled') renderActivitiesFallback(results[3].value);
+        if (results[4].status === 'fulfilled') renderGrowthFallback(results[4].value);
+      } catch (_) {}
+    }
+
     // Init admin core
     if (window.AdminCore) {
       var app = document.getElementById('dash-layout');
       if (app) AdminCore.init(app);
     }
+
+    setTimeout(bootstrapFallbackData, 200);
 
     // ── 模态框事件委托 ──────────────────────────────────
     // 关闭按钮
@@ -460,20 +778,23 @@
       var closeBtn = e.target.closest('[data-modal-close]');
       if (closeBtn) {
         var modalId = closeBtn.dataset.modalClose;
-        var modal = document.getElementById(modalId);
-        if (modal) modal.classList.remove('modal-overlay--open');
+        if (modalId === 'announcement-modal' && window.AdminAnnouncements) {
+          AdminAnnouncements.closeModal();
+        } else if (window.AdminCore) {
+          AdminCore.closeModal(modalId);
+        }
         return;
       }
 
       // 模态框背景点击关闭
       if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('modal-overlay--open')) {
-        e.target.classList.remove('modal-overlay--open');
+        if (e.target.id === 'announcement-modal' && window.AdminAnnouncements) {
+          AdminAnnouncements.closeModal();
+        } else if (window.AdminCore) {
+          AdminCore.closeModal(e.target.id);
+        }
       }
 
-      // 公告模态框关闭按钮
-      if (e.target.closest('#close-announcement-modal') && window.AdminAnnouncements) {
-        AdminAnnouncements.closeModal();
-      }
     });
 
     // 封禁确认
@@ -482,7 +803,7 @@
       var action = document.getElementById('suspend-action')?.value;
       var reason = document.getElementById('suspend-reason')?.value || '';
       if (!userId || !action) return;
-      document.getElementById('suspend-modal')?.classList.remove('modal-overlay--open');
+      if (window.AdminCore) AdminCore.closeModal('suspend-modal');
       try {
         var res = await window.AdminApi.apiFetch('/api/admin/users/' + userId + '/suspend', {
           method: 'PUT',
@@ -498,7 +819,7 @@
       var userId = parseInt(document.getElementById('role-user-id')?.value);
       var newRole = document.getElementById('role-new-role')?.value;
       if (!userId || !newRole) return;
-      document.getElementById('role-modal')?.classList.remove('modal-overlay--open');
+      if (window.AdminCore) AdminCore.closeModal('role-modal');
       try {
         await window.AdminApi.apiFetch('/api/admin/users/' + userId + '/role', {
           method: 'PUT',
@@ -521,7 +842,7 @@
         danger: true,
       });
       if (!confirmed) return;
-      document.getElementById('delete-modal')?.classList.remove('modal-overlay--open');
+      if (window.AdminCore) AdminCore.closeModal('delete-modal');
       try {
         await window.AdminApi.apiFetch('/api/admin/users/' + userId, { method: 'DELETE' });
         window.AdminUI.toast('用户已删除', 'success');
@@ -529,14 +850,9 @@
       } catch (e) { window.AdminUI.toast('删除失败: ' + e.message, 'error'); }
     });
 
-    // 公告保存
-    document.getElementById('save-announcement-btn')?.addEventListener('click', function() {
-      if (window.AdminAnnouncements) AdminAnnouncements.saveAnnouncement();
-    });
-
-    // 公告新增按钮
-    document.getElementById('add-announcement-btn')?.addEventListener('click', function() {
-      if (window.AdminAnnouncements) AdminAnnouncements.openCreateModal();
+    document.getElementById('invoice-confirm-btn')?.addEventListener('click', async function() {
+      if (!window.AdminInvoices) return;
+      await window.AdminInvoices.saveInvoice();
     });
 
     // 登出按钮
@@ -545,11 +861,6 @@
         await window.AdminApi.apiFetch('/api/auth/logout', { method: 'POST' });
       } catch (_) {}
       window.location.href = '/login';
-    });
-
-    // 公告模态框标题
-    document.getElementById('announcement-modal')?.addEventListener('open', function() {
-      // handled by AdminAnnouncements
     });
   });
 </script>

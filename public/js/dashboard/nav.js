@@ -9,6 +9,19 @@
       document.getElementById('dash-sidebar').classList.toggle('open');
       document.getElementById('sidebar-overlay').classList.toggle('open');
     });
+    document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
+    document.getElementById('account-menu-toggle')?.addEventListener('click', toggleAccountMenu);
+    document.getElementById('dashboard-logout-link')?.addEventListener('click', function (event) {
+      event.preventDefault();
+      if (typeof logout === 'function') logout();
+    });
+
+    document.querySelectorAll('.sidebar-nav__item[data-section], .sidebar-nav__subitem[data-section]').forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+        showSection(link.dataset.section);
+      });
+    });
   }
 
   function closeSidebar() {
