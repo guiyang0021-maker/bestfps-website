@@ -182,10 +182,15 @@
     applyTheme();
 
     async function api(path, options = {}) {
+      const csrfToken = (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/) || [])[1] || '';
       const res = await fetch('/api/share' + path, {
         ...options,
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...options.headers },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          ...options.headers,
+        },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '请求失败');
@@ -213,6 +218,7 @@
 
     function parseJsonField(value, fallback) {
       if (!value) return fallback;
+      if (typeof value === 'object') return value;
       try {
         return JSON.parse(value);
       } catch (_) {
@@ -262,7 +268,7 @@
     }
 
     function renderShare(data) {
-      const share = data.share;
+      const share = data.share || data;
       const shaderSettings = parseJsonField(share.shader_settings, {});
       const resourcePacks = parseJsonField(share.resource_packs, []);
       // Update nav for logged in users
@@ -320,10 +326,10 @@
         <div class="share-card">
           <div class="share-header">
             <div class="share-avatar">⚙️</div>
-            <h1>${escapeHtml(share.title || (share.username + ' 的配置分享'))}</h1>
-            <p>由 <strong>${escapeHtml(share.username)}</strong> 分享 · ${formatDate(share.created_at)}</p>
+            <h1>${escapeHtml(share.title || share.name || ((share.username || '用户') + ' 的配置分享'))}</h1>
+            <p>由 <strong>${escapeHtml(share.username || '用户')}</strong> 分享 · ${formatDate(share.created_at)}</p>
             <div class="share-meta">
-              ${share.views > 0 ? `<span class="share-meta-item">👁️ ${share.views} 次浏览</span>` : ''}
+              ${(share.views || share.view_count || 0) > 0 ? `<span class="share-meta-item">👁️ ${share.views || share.view_count || 0} 次浏览</span>` : ''}
               <span class="share-meta-item">🔗 ${share.use_count || 0} 次使用</span>
             </div>
           </div>
@@ -340,7 +346,7 @@
               <div class="share-stat-label">资源包</div>
             </div>
             <div class="share-stat">
-              <div class="share-stat-value">${share.views || 0}</div>
+              <div class="share-stat-value">${share.views || share.view_count || 0}</div>
               <div class="share-stat-label">浏览量</div>
             </div>
           </div>
@@ -408,7 +414,12 @@
 
     async function logout() {
       try {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        const csrfToken = (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/) || [])[1] || '';
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': csrfToken },
+        });
       } finally {
         window.location.reload();
       }

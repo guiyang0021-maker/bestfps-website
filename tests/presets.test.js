@@ -403,6 +403,38 @@ describe('POST /api/presets/:id/apply', () => {
     expect(getRes.body.shader_settings).toEqual({ applied: true });
     expect(getRes.body.resource_packs).toEqual(['applied_pack.zip']);
   });
+
+  it('should create user settings when applying preset without existing settings row', async () => {
+    const token = await getToken();
+    const user = testEnv.db._prepare('SELECT id FROM users WHERE email = ?').get('test@example.com');
+
+    testEnv.db._prepare('DELETE FROM user_settings WHERE user_id = ?').run(user.id);
+
+    const createRes = await request(app)
+      .post('/api/presets')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Apply Without Settings',
+        shader_settings: { fallback: true },
+        resource_packs: ['fallback-pack.zip'],
+      });
+
+    const id = createRes.body.preset.id;
+
+    const applyRes = await request(app)
+      .post(`/api/presets/${id}/apply`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(applyRes.status).toBe(200);
+
+    const settings = testEnv.db._prepare(
+      'SELECT shader_settings, resource_packs FROM user_settings WHERE user_id = ?'
+    ).get(user.id);
+
+    expect(settings).toBeDefined();
+    expect(JSON.parse(settings.shader_settings)).toEqual({ fallback: true });
+    expect(JSON.parse(settings.resource_packs)).toEqual(['fallback-pack.zip']);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -293,6 +293,7 @@ try {
   CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoice_requests(user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoice_requests(status, created_at DESC);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_hwid_bindings_user_active ON hwid_bindings(user_id) WHERE status = 'active';
   CREATE INDEX IF NOT EXISTS idx_hwid_bindings_user ON hwid_bindings(user_id, status, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_hwid_bindings_hash ON hwid_bindings(hwid_hash);
   CREATE INDEX IF NOT EXISTS idx_hwid_bind_tokens_user ON hwid_bind_tokens(user_id, created_at DESC);
@@ -413,6 +414,28 @@ try {
           db.exec(`ALTER TABLE hwid_bindings ADD COLUMN ${col} ${def}`);
         }
       });
+
+      db.exec(`
+        UPDATE hwid_bindings
+        SET status = 'revoked',
+            revoked_at = COALESCE(revoked_at, datetime('now')),
+            updated_at = datetime('now')
+        WHERE id IN (
+          SELECT hb.id
+          FROM hwid_bindings hb
+          JOIN (
+            SELECT user_id, MAX(id) AS keep_id
+            FROM hwid_bindings
+            WHERE status = 'active'
+            GROUP BY user_id
+            HAVING COUNT(*) > 1
+          ) dup
+            ON dup.user_id = hb.user_id
+          WHERE hb.status = 'active'
+            AND hb.id != dup.keep_id
+        )
+      `);
+      db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_hwid_bindings_user_active ON hwid_bindings(user_id) WHERE status = 'active'");
     }
 
     const hwidTokenCols = db.pragma('table_info(hwid_bind_tokens)').map(r => r.name);

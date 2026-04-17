@@ -622,7 +622,12 @@
 
     async function logout() {
       try {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        const csrfToken = (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/) || [])[1] || '';
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': csrfToken },
+        });
       } finally {
         window.location.href = '/';
       }

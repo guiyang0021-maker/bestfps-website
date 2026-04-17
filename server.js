@@ -10,6 +10,7 @@ const compression = require('compression');
 const path = require('path');
 
 const cookieParser = require('cookie-parser');
+const { db } = require('./db');
 const authRouter = require('./routes/auth');
 const settingsRouter = require('./routes/settings');
 const downloadsRouter = require('./routes/downloads');
@@ -21,8 +22,7 @@ const invoicesRouter = require('./routes/invoices');
 const hwidRouter = require('./routes/hwid');
 const { csrfMiddleware } = require('./middleware/csrf');
 const adminRouter = require('./routes/admin');
-const { requireAuth } = require('./middleware/auth');
-const { requireAdmin } = require('./middleware/admin');
+const { extractToken, verifyToken, JWT_COOKIE_NAME } = require('./middleware/auth');
 
 // API 路由
 
@@ -77,9 +77,92 @@ app.use(cors({
 
 app.use(cookieParser());
 
+const PAGE_AUTH_STATE_SQL = `
+  SELECT
+    u.role,
+    u.status,
+    CASE
+      WHEN ? = '' THEN 0
+      WHEN EXISTS (
+        SELECT 1
+        FROM user_sessions s
+        WHERE s.user_id = u.id
+          AND s.jti = ?
+          AND datetime(s.expires_at) > datetime('now')
+      ) THEN 1
+      WHEN EXISTS (
+        SELECT 1
+        FROM user_sessions s
+        WHERE s.user_id = u.id
+          AND s.jti = ?
+      ) THEN 0
+      ELSE 1
+    END AS session_valid
+  FROM users u
+  WHERE u.id = ?
+`;
+
+function clearAuthCookies(res) {
+  res.clearCookie(JWT_COOKIE_NAME, { path: '/' });
+  res.clearCookie('csrf_token', { path: '/' });
+}
+
+function requirePageAuth(req, res, next) {
+  const token = extractToken(req);
+  if (!token) return res.redirect('/login');
+
+  let payload;
+  try {
+    payload = verifyToken(token);
+  } catch (_) {
+    clearAuthCookies(res);
+    return res.redirect('/login');
+  }
+
+  db.get(PAGE_AUTH_STATE_SQL, [payload.jti || '', payload.jti || '', payload.jti || '', payload.id], (err, user) => {
+    if (err || !user || !user.session_valid || user.status !== 'active') {
+      clearAuthCookies(res);
+      return res.redirect('/login');
+    }
+    req.user = { ...payload, role: user.role || payload.role || 'user' };
+    req.token = token;
+    next();
+  });
+}
+
+function requirePageAdmin(req, res, next) {
+  requirePageAuth(req, res, () => {
+    if (req.user.role !== 'admin') {
+      return res.redirect('/dashboard');
+    }
+    next();
+  });
+}
+
+const CSRF_COOKIE_OPTIONAL_EXEMPT_PATHS = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/confirm-email-change',
+  '/hwid/bind',
+]);
+
+function csrfForSessionCookies(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  if (!req.cookies || !req.cookies[JWT_COOKIE_NAME]) return next();
+  if (CSRF_COOKIE_OPTIONAL_EXEMPT_PATHS.has(req.path)) return next();
+  return csrfMiddleware(req, res, next);
+}
+
+// Trust proxy
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 const isLocalhost = (req) => {
   const ip = req.ip || req.connection.remoteAddress || '';
-  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.startsWith('192.168') || ip.startsWith('10.') || ip === 'localhost';
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 };
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -89,11 +172,6 @@ app.use(rateLimit({
   skip: (req) => isLocalhost(req),
   message: { error: '请求过于频繁，请稍后再试' },
 }));
-
-// Trust proxy
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
 
 app.use(compression({
   level: 6,
@@ -108,8 +186,25 @@ app.use(compression({
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 
+const PROTECTED_STATIC_PAGES = new Map([
+  ['/dashboard.html', '/dashboard'],
+  ['/settings.html', '/settings'],
+  ['/sessions.html', '/sessions'],
+  ['/admin.html', '/admin'],
+]);
+
+app.use((req, res, next) => {
+  const redirectTarget = PROTECTED_STATIC_PAGES.get(String(req.path || '').toLowerCase());
+  if (redirectTarget) {
+    return res.redirect(redirectTarget);
+  }
+  next();
+});
+
 // 静态文件
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/api', csrfForSessionCookies);
 
 app.use('/api/auth', authRouter);
 app.use('/api/settings', settingsRouter);
@@ -138,7 +233,7 @@ app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
-app.get('/dashboard', (req, res) => {
+app.get('/dashboard', requirePageAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
@@ -154,11 +249,11 @@ app.get('/pricing', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pricing.html'));
 });
 
-app.get('/settings', (req, res) => {
+app.get('/settings', requirePageAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 
-app.get('/sessions', (req, res) => {
+app.get('/sessions', requirePageAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sessions.html'));
 });
 
@@ -170,7 +265,7 @@ app.get('/change-email', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'change-email.html'));
 });
 
-app.get('/admin', requireAuth, requireAdmin, (req, res) => {
+app.get('/admin', requirePageAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
@@ -190,6 +285,10 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-app.listen(PORT, () => {
-  console.log(`\n  bestfps server running at http://localhost:${PORT}\n`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`\n  bestfps server running at http://localhost:${PORT}\n`);
+  });
+}
+
+module.exports = app;

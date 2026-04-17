@@ -54,6 +54,12 @@ function getHwidPreview(hash) {
   return String(hash).slice(0, 12).toUpperCase();
 }
 
+function createHttpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
 function mapBinding(row) {
   return {
     id: row.id,
@@ -180,114 +186,96 @@ router.post('/bind', (req, res) => {
     return res.status(400).json({ error: '设备名不能为空' });
   }
 
-  db.get(
-    `SELECT id, user_id, expires_at, used_at
-     FROM hwid_bind_tokens
-     WHERE token = ?`,
-    [token],
-    (err, tokenRow) => {
-      if (err) {
-        console.error('[HWID] Bind token lookup error:', err);
-        return res.status(500).json({ error: '服务器内部错误' });
-      }
-      if (!tokenRow) return res.status(404).json({ error: '绑定令牌不存在' });
-      if (tokenRow.used_at) return res.status(409).json({ error: '绑定令牌已被使用' });
+  try {
+    const result = db._rawDb.transaction(() => {
+      const tokenRow = db._prepare(
+        `SELECT id, user_id, expires_at, used_at, requested_ip
+         FROM hwid_bind_tokens
+         WHERE token = ?`
+      ).get(token);
+
+      if (!tokenRow) throw createHttpError(404, '绑定令牌不存在');
+      if (tokenRow.used_at) throw createHttpError(409, '绑定令牌已被使用');
       if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
-        return res.status(410).json({ error: '绑定令牌已过期' });
+        throw createHttpError(410, '绑定令牌已过期');
       }
 
-      db.get(
-        `SELECT id, hwid_hash, status
+      const requestedIp = normalizeIp(tokenRow.requested_ip);
+      if (requestedIp && clientIp && requestedIp !== clientIp) {
+        throw createHttpError(403, '绑定请求来源与令牌签发环境不一致，请返回网页重新生成令牌');
+      }
+
+      const existingBinding = db._prepare(
+        `SELECT id, hwid_hash
          FROM hwid_bindings
          WHERE user_id = ?
            AND status = 'active'
          ORDER BY created_at DESC
-         LIMIT 1`,
-        [tokenRow.user_id],
-        (bindingErr, existingBinding) => {
-          if (bindingErr) {
-            console.error('[HWID] Existing binding lookup error:', bindingErr);
-            return res.status(500).json({ error: '服务器内部错误' });
-          }
+         LIMIT 1`
+      ).get(tokenRow.user_id);
 
-          const finishTokenUse = (callback) => {
-            db.run(
-              `UPDATE hwid_bind_tokens
-               SET used_at = datetime('now')
-               WHERE id = ?`,
-              [tokenRow.id],
-              callback
-            );
-          };
+      if (existingBinding && existingBinding.hwid_hash !== hwidHash) {
+        throw createHttpError(409, '当前账号已有其他设备的 HWID 绑定，请先解绑');
+      }
 
-          if (existingBinding && existingBinding.hwid_hash !== hwidHash) {
-            return res.status(409).json({ error: '当前账号已有其他设备的 HWID 绑定，请先解绑' });
-          }
+      const binding = {
+        hwid_preview: getHwidPreview(hwidHash),
+        device_name: deviceName,
+      };
 
-          if (existingBinding) {
-            return db.run(
-              `UPDATE hwid_bindings
-               SET device_name = ?, os_name = ?, agent_version = ?, last_ip = ?, updated_at = datetime('now'), last_seen_at = datetime('now')
-               WHERE id = ?`,
-              [deviceName, osName, agentVersion, clientIp, existingBinding.id],
-              (updateErr) => {
-                if (updateErr) {
-                  console.error('[HWID] Refresh binding error:', updateErr);
-                  return res.status(500).json({ error: '服务器内部错误' });
-                }
+      if (existingBinding) {
+        db._prepare(
+          `UPDATE hwid_bindings
+           SET device_name = ?, os_name = ?, agent_version = ?, last_ip = ?, updated_at = datetime('now'), last_seen_at = datetime('now')
+           WHERE id = ?`
+        ).run(deviceName, osName, agentVersion, clientIp, existingBinding.id);
+      } else {
+        db._prepare(
+          `INSERT INTO hwid_bindings (user_id, hwid_hash, hwid_preview, device_name, os_name, agent_version, status, bind_source, last_ip)
+           VALUES (?, ?, ?, ?, ?, ?, 'active', 'agent', ?)`
+        ).run(tokenRow.user_id, hwidHash, binding.hwid_preview, deviceName, osName, agentVersion, clientIp);
+      }
 
-                finishTokenUse(() => {
-                  logActivity(
-                    tokenRow.user_id,
-                    'hwid_refresh',
-                    `Refreshed HWID binding for ${deviceName}`,
-                    { hwid_preview: getHwidPreview(hwidHash), device_name: deviceName },
-                    clientIp
-                  );
-                  res.json({
-                    message: 'HWID 绑定已刷新',
-                    binding: {
-                      hwid_preview: getHwidPreview(hwidHash),
-                      device_name: deviceName,
-                    },
-                  });
-                });
-              }
-            );
-          }
+      const consumeResult = db._prepare(
+        `UPDATE hwid_bind_tokens
+         SET used_at = datetime('now')
+         WHERE id = ?
+           AND used_at IS NULL`
+      ).run(tokenRow.id);
 
-          db.run(
-            `INSERT INTO hwid_bindings (user_id, hwid_hash, hwid_preview, device_name, os_name, agent_version, status, bind_source, last_ip)
-             VALUES (?, ?, ?, ?, ?, ?, 'active', 'agent', ?)`,
-            [tokenRow.user_id, hwidHash, getHwidPreview(hwidHash), deviceName, osName, agentVersion, clientIp],
-            (insertErr) => {
-              if (insertErr) {
-                console.error('[HWID] Insert binding error:', insertErr);
-                return res.status(500).json({ error: '服务器内部错误' });
-              }
+      if (!consumeResult.changes) {
+        throw createHttpError(409, '绑定令牌已被使用');
+      }
 
-              finishTokenUse(() => {
-                logActivity(
-                  tokenRow.user_id,
-                  'hwid_bind',
-                  `Bound HWID to ${deviceName}`,
-                  { hwid_preview: getHwidPreview(hwidHash), device_name: deviceName },
-                  clientIp
-                );
-                res.status(201).json({
-                  message: 'HWID 绑定成功',
-                  binding: {
-                    hwid_preview: getHwidPreview(hwidHash),
-                    device_name: deviceName,
-                  },
-                });
-              });
-            }
-          );
-        }
-      );
+      return {
+        userId: tokenRow.user_id,
+        statusCode: existingBinding ? 200 : 201,
+        eventType: existingBinding ? 'hwid_refresh' : 'hwid_bind',
+        description: existingBinding ? `Refreshed HWID binding for ${deviceName}` : `Bound HWID to ${deviceName}`,
+        message: existingBinding ? 'HWID 绑定已刷新' : 'HWID 绑定成功',
+        binding,
+      };
+    })();
+
+    logActivity(
+      result.userId,
+      result.eventType,
+      result.description,
+      { hwid_preview: result.binding.hwid_preview, device_name: result.binding.device_name },
+      clientIp
+    );
+
+    return res.status(result.statusCode).json({
+      message: result.message,
+      binding: result.binding,
+    });
+  } catch (err) {
+    if (err && err.status) {
+      return res.status(err.status).json({ error: err.message });
     }
-  );
+    console.error('[HWID] Bind error:', err);
+    return res.status(500).json({ error: '服务器内部错误' });
+  }
 });
 
 router.delete('/bindings/:id', requireAuth, (req, res) => {

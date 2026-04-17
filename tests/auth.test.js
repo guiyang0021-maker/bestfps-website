@@ -1,6 +1,7 @@
 'use strict';
 
 const request = require('supertest');
+const emailSender = require('../email/sender');
 const { setupTestDb, cleanTestDb } = require('./helpers');
 const { createTestApp, createTestUser } = require('./appFactory');
 
@@ -458,5 +459,55 @@ describe('DELETE /api/auth/account', () => {
     expect(res.status).toBe(200);
     const deletedUser = testEnv.db._prepare('SELECT id FROM users WHERE email = ?').get('test@example.com');
     expect(deletedUser).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/confirm-email-change
+// ---------------------------------------------------------------------------
+describe('POST /api/auth/confirm-email-change', () => {
+  it('should confirm pending email change and return JSON', async () => {
+    const user = testEnv.db._prepare('SELECT id, email FROM users WHERE email = ?').get('test@example.com');
+    const token = 'email-change-token';
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    testEnv.db._prepare(
+      'INSERT INTO email_change_requests (user_id, new_email, old_email, token, expires_at) VALUES (?, ?, ?, ?, ?)'
+    ).run(user.id, 'updated@example.com', user.email, token, expiresAt);
+
+    const res = await request(app)
+      .post('/api/auth/confirm-email-change?token=' + encodeURIComponent(token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.new_email).toBe('updated@example.com');
+
+    const updatedUser = testEnv.db._prepare('SELECT email FROM users WHERE id = ?').get(user.id);
+    expect(updatedUser.email).toBe('updated@example.com');
+  });
+});
+
+describe('POST /api/auth/change-email', () => {
+  it('should send confirmation link to frontend change-email page', async () => {
+    emailSender.sendEmailChangeVerification.mockClear();
+
+    const token = await new Promise((resolve, reject) => {
+      testEnv.db.get('SELECT * FROM users WHERE email = ?', ['test@example.com'], (err, user) => {
+        if (err || !user) return reject(err || new Error('User not found'));
+        resolve(testEnv.reloaded.authMiddleware.generateToken(user, 'test-jti-' + user.id));
+      });
+    });
+
+    const res = await request(app)
+      .post('/api/auth/change-email')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ new_email: 'newmail@example.com', password: 'Test@1234' });
+
+    expect(res.status).toBe(200);
+    expect(emailSender.sendEmailChangeVerification).toHaveBeenCalledTimes(1);
+    expect(emailSender.sendEmailChangeVerification).toHaveBeenCalledWith(
+      'newmail@example.com',
+      expect.stringMatching(/\/change-email\?token=/),
+      'testuser'
+    );
   });
 });

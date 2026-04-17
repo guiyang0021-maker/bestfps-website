@@ -13,16 +13,20 @@
       var res = await fetch('/api/auth/avatar', {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'X-CSRF-Token': window.getCsrfToken ? window.getCsrfToken() : '',
+        },
         body: formData,
       });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      var avatarUrl = data.avatar_url || data.avatar;
       var img = document.getElementById('sidebar-avatar-img');
-      img.src = data.avatar + '?t=' + Date.now();
+      img.src = avatarUrl + '?t=' + Date.now();
       img.style.display = 'block';
       document.getElementById('avatar-placeholder').style.display = 'none';
       if (window.currentUser) {
-        window.currentUser.avatar = data.avatar;
+        window.currentUser.avatar = avatarUrl;
       }
     } catch (err) {
       alert('头像上传失败: ' + err.message);

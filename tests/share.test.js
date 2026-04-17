@@ -316,3 +316,33 @@ describe('GET /api/share', () => {
     expect(res.body.shares[0].name).toBe('Alias Share');
   });
 });
+
+// ---------------------------------------------------------------------------
+// POST /api/share/:token/import
+// ---------------------------------------------------------------------------
+describe('POST /api/share/:token/import', () => {
+  it('should import share settings into the current user settings', async () => {
+    const token = await getToken();
+    const createRes = await request(app)
+      .post('/api/share')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Importable Share',
+        shader_settings: { brightness: 0.75, maxFps: 240 },
+        resource_packs: ['pack-a.zip'],
+      });
+
+    const importRes = await request(app)
+      .post(`/api/share/${createRes.body.token}/import`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(importRes.status).toBe(200);
+    expect(importRes.body.message).toMatch(/导入/);
+
+    const settings = testEnv.db._prepare(
+      'SELECT shader_settings, resource_packs FROM user_settings WHERE user_id = (SELECT id FROM users WHERE email = ?)'
+    ).get('test@example.com');
+    expect(JSON.parse(settings.shader_settings)).toEqual({ brightness: 0.75, maxFps: 240 });
+    expect(JSON.parse(settings.resource_packs)).toEqual(['pack-a.zip']);
+  });
+});

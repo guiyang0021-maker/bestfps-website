@@ -96,7 +96,13 @@
 
   function logout() {
     // 调用服务器端 logout 接口清除 httpOnly Cookie
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-CSRF-Token': window.getCsrfToken ? window.getCsrfToken() : '',
+      },
+    })
       .then(() => {
         window.location.href = '/';
       })

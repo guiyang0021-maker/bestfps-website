@@ -236,7 +236,7 @@ function setup(router) {
             console.error('[Auth/Account] Update avatar error:', err);
             return res.status(500).json({ error: '服务器内部错误' });
           }
-          res.json({ message: '头像上传成功', avatar_url: avatarPath });
+          res.json({ message: '头像上传成功', avatar_url: avatarPath, avatar: avatarPath });
         });
       });
     });

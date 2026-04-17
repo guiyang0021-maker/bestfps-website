@@ -116,6 +116,9 @@
     document.getElementById('quick-invoice-btn')?.addEventListener('click', function () {
       window.location.href = '/settings#invoices';
     });
+    document.getElementById('quick-hwid-btn')?.addEventListener('click', function () {
+      window.location.href = '/settings#hwid';
+    });
     document.getElementById('quick-export-btn')?.addEventListener('click', function () {
       if (typeof window.exportConfig === 'function') window.exportConfig();
     });

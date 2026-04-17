@@ -153,8 +153,13 @@ router.post('/:id/apply', (req, res) => {
     if (!preset) return res.status(404).json({ error: '预设不存在' });
 
     db.run(
-      "UPDATE user_settings SET shader_settings = ?, resource_packs = ?, updated_at = datetime('now') WHERE user_id = ?",
-      [preset.shader_settings, preset.resource_packs, req.user.id],
+      `INSERT INTO user_settings (user_id, shader_settings, resource_packs, updated_at)
+       VALUES (?, ?, ?, datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET
+         shader_settings = excluded.shader_settings,
+         resource_packs = excluded.resource_packs,
+         updated_at = datetime('now')`,
+      [req.user.id, preset.shader_settings, preset.resource_packs],
       (err) => {
         if (err) {
           console.error('[Presets] Apply error:', err);

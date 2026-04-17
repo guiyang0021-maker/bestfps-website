@@ -30,6 +30,29 @@ function listShares(req, res) {
   );
 }
 
+function upsertUserSettings(userId, shaderSettings, resourcePacks, callback) {
+  db.get('SELECT id FROM user_settings WHERE user_id = ?', [userId], (err, existing) => {
+    if (err) return callback(err);
+
+    const nextShaderSettings = JSON.stringify(shaderSettings || {});
+    const nextResourcePacks = JSON.stringify(resourcePacks || []);
+
+    if (existing) {
+      return db.run(
+        "UPDATE user_settings SET shader_settings = ?, resource_packs = ?, updated_at = datetime('now') WHERE user_id = ?",
+        [nextShaderSettings, nextResourcePacks, userId],
+        callback
+      );
+    }
+
+    return db.run(
+      'INSERT INTO user_settings (user_id, shader_settings, resource_packs) VALUES (?, ?, ?)',
+      [userId, nextShaderSettings, nextResourcePacks],
+      callback
+    );
+  });
+}
+
 router.post('/', requireAuth, (req, res) => {
   const { name, description, shader_settings, resource_packs } = req.body;
 
@@ -65,6 +88,53 @@ router.get('/my-links', requireAuth, listShares);
 
 router.get('/', requireAuth, listShares);
 
+router.post('/:token/import', requireAuth, (req, res) => {
+  db.get(
+    `SELECT token, name, shader_settings, resource_packs, expires_at
+     FROM config_shares
+     WHERE token = ?`,
+    [req.params.token],
+    (err, share) => {
+      if (err) {
+        console.error('[Share] Import lookup error:', err);
+        return res.status(500).json({ error: '服务器内部错误' });
+      }
+      if (!share) {
+        return res.status(404).json({ error: '分享不存在或已失效' });
+      }
+      if (share.expires_at && new Date(share.expires_at) < new Date()) {
+        return res.status(410).json({ error: '分享链接已过期' });
+      }
+
+      let shaderSettings;
+      let resourcePacks;
+      try {
+        shaderSettings = JSON.parse(share.shader_settings || '{}');
+        resourcePacks = JSON.parse(share.resource_packs || '[]');
+      } catch (parseErr) {
+        console.error('[Share] Import parse error:', parseErr);
+        return res.status(500).json({ error: '分享数据损坏，无法导入' });
+      }
+
+      upsertUserSettings(req.user.id, shaderSettings, resourcePacks, (updateErr) => {
+        if (updateErr) {
+          console.error('[Share] Import update error:', updateErr);
+          return res.status(500).json({ error: '服务器内部错误' });
+        }
+
+        logActivity(
+          req.user.id,
+          'share_import',
+          '导入了分享「' + share.name + '」',
+          { token: req.params.token, name: share.name },
+          req.ip
+        );
+        res.json({ message: '配置已成功导入到你的账号！' });
+      });
+    }
+  );
+});
+
 router.get('/:token', (req, res) => {
   const cacheKey = getShareCacheKey(req.params.token);
   const cachedShare = cache.get(cacheKey);
@@ -82,7 +152,22 @@ router.get('/:token', (req, res) => {
     };
 
     cache.set(cacheKey, nextPayload, SHARE_CACHE_TTL);
-    res.json(nextPayload);
+    res.json({
+      ...nextPayload,
+      share: {
+        title: nextPayload.name,
+        name: nextPayload.name,
+        username: nextPayload.username || '用户',
+        description: nextPayload.description,
+        shader_settings: nextPayload.shader_settings,
+        resource_packs: nextPayload.resource_packs,
+        created_at: nextPayload.created_at,
+        expires_at: nextPayload.expires_at,
+        views: nextPayload.view_count,
+        view_count: nextPayload.view_count,
+        use_count: nextPayload.use_count || 0,
+      },
+    });
   };
 
   if (cachedShare) {
@@ -95,7 +180,10 @@ router.get('/:token', (req, res) => {
   }
 
   db.get(
-    'SELECT * FROM config_shares WHERE token = ?',
+    `SELECT s.*, u.username
+     FROM config_shares s
+     LEFT JOIN users u ON u.id = s.user_id
+     WHERE s.token = ?`,
     [req.params.token],
     (err, share) => {
       if (err) {
@@ -111,6 +199,7 @@ router.get('/:token', (req, res) => {
 
       return respondWithShare({
         name: share.name,
+        username: share.username,
         description: share.description,
         shader_settings: JSON.parse(share.shader_settings || '{}'),
         resource_packs: JSON.parse(share.resource_packs || '[]'),

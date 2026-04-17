@@ -6,8 +6,17 @@
   'use strict';
 
   // ---- Auth helpers ----
-  function authHeaders() {
-    return {};
+  function getCsrfToken() {
+    var match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
+  function authHeaders(method) {
+    var headers = {};
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(String(method || 'GET').toUpperCase())) {
+      headers['X-CSRF-Token'] = getCsrfToken();
+    }
+    return headers;
   }
 
   async function api(method, path, body, skipAuth) {
@@ -16,7 +25,7 @@
       credentials: 'include', // 发送 httpOnly Cookie（JWT）
       headers: {
         'Content-Type': 'application/json',
-        ...(skipAuth ? {} : authHeaders()),
+        ...(skipAuth ? {} : authHeaders(method)),
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -37,5 +46,6 @@
 
   // Expose globally for use by other modules and inline onclick handlers
   window.authHeaders = authHeaders;
+  window.getCsrfToken = getCsrfToken;
   window.api = api;
 })();

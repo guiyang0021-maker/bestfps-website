@@ -7,10 +7,11 @@
   async function loadProfile() {
     try {
       var data = await window.api('GET', '/auth/profile');
-      document.getElementById('profile-bio').value = data.bio || '';
-      document.getElementById('profile-website').value = data.website || '';
-      document.getElementById('profile-discord').value = data.social_discord || '';
-      document.getElementById('profile-twitter').value = data.social_twitter || '';
+      var profile = data && data.user ? data.user : data;
+      document.getElementById('profile-bio').value = profile.bio || '';
+      document.getElementById('profile-website').value = profile.website || '';
+      document.getElementById('profile-discord').value = profile.social_discord || '';
+      document.getElementById('profile-twitter').value = profile.social_twitter || '';
     } catch (err) {
       console.error('Load profile error:', err);
     }

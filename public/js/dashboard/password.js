@@ -14,7 +14,7 @@
     if (newPw !== confirmPw) return window.toast('两次密码输入不一致', 'error');
 
     try {
-      await window.api('POST', '/auth/change-password', { oldPassword: oldPw, newPassword: newPw });
+      await window.api('POST', '/auth/change-password', { old_password: oldPw, new_password: newPw });
       window.toast('密码已修改，其他会话已被吊销', 'success');
       document.getElementById('old-password').value = '';
       document.getElementById('new-password').value = '';

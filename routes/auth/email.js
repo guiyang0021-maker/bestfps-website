@@ -178,7 +178,7 @@ function setup(router) {
                 return res.status(500).json({ error: '服务器内部错误' });
               }
 
-              const confirmUrl = `${req.protocol}://${req.get('host')}/api/auth/confirm-email-change?token=${token}`;
+              const confirmUrl = `${req.protocol}://${req.get('host')}/change-email?token=${encodeURIComponent(token)}`;
               try {
                 await sendEmailChangeVerification(new_email, confirmUrl, user.username);
               } catch (e) {
@@ -193,38 +193,81 @@ function setup(router) {
     });
   });
 
-  router.get('/confirm-email-change', (req, res) => {
-    const { token } = req.query;
+  function confirmEmailChange(token, callback) {
     if (!token) {
-      return res.status(400).send('<h2>确认链接无效</h2><p>token 缺失</p>');
+      return callback({ status: 400, error: '确认链接无效' });
     }
 
     db.get('SELECT * FROM email_change_requests WHERE token = ?', [token], (err, record) => {
       if (err) {
         console.error('[Auth/Email] Confirm email change error:', err);
-        return res.status(500).send('<h2>服务器错误</h2>');
+        return callback({ status: 500, error: '服务器错误' });
       }
       if (!record) {
-        return res.status(400).send('<h2>确认链接无效</h2><p>token 不存在</p>');
+        return callback({ status: 400, error: '确认链接无效' });
       }
       if (new Date(record.expires_at) < new Date()) {
-        return res.status(400).send('<h2>确认链接已过期</h2><p>请重新申请邮箱修改</p>');
+        return callback({ status: 400, error: '确认链接已过期' });
       }
 
-      db.run('UPDATE users SET email = ? WHERE id = ?', [record.new_email, record.user_id], (err) => {
-        if (err) console.error('[Auth/Email] Update email error:', err);
-      });
-      db.run('DELETE FROM email_change_requests WHERE id = ?', [record.id], (err) => {
-        if (err) console.error('[Auth/Email] Delete change request error:', err);
-      });
+      db.get('SELECT id FROM users WHERE email = ? AND id != ?', [record.new_email, record.user_id], (checkErr, existing) => {
+        if (checkErr) {
+          console.error('[Auth/Email] Confirm email duplicate check error:', checkErr);
+          return callback({ status: 500, error: '服务器错误' });
+        }
+        if (existing) {
+          return callback({ status: 409, error: '该邮箱已被其他账号使用' });
+        }
 
-      try {
-        sendEmailChangeNotification(record.old_email, record.new_email);
-      } catch (e) {
-        console.error('[Auth/Email] Send notification error:', e);
+        db.run('UPDATE users SET email = ? WHERE id = ?', [record.new_email, record.user_id], (updateErr) => {
+          if (updateErr) {
+            console.error('[Auth/Email] Update email error:', updateErr);
+            return callback({ status: 500, error: '服务器错误' });
+          }
+
+          db.run('DELETE FROM email_change_requests WHERE id = ?', [record.id], (deleteErr) => {
+            if (deleteErr) {
+              console.error('[Auth/Email] Delete change request error:', deleteErr);
+              return callback({ status: 500, error: '服务器错误' });
+            }
+
+            try {
+              sendEmailChangeNotification(record.old_email, record.new_email);
+            } catch (e) {
+              console.error('[Auth/Email] Send notification error:', e);
+            }
+
+            return callback(null, { new_email: record.new_email });
+          });
+        });
+      });
+    });
+  }
+
+  router.get('/confirm-email-change', (req, res) => {
+    const { token } = req.query;
+    confirmEmailChange(token, (resultErr, result) => {
+      if (resultErr) {
+        if (resultErr.error.includes('过期')) {
+          return res.status(resultErr.status).send('<h2>确认链接已过期</h2><p>请重新申请邮箱修改</p>');
+        }
+        if (resultErr.status === 409) {
+          return res.status(resultErr.status).send('<h2>邮箱修改失败</h2><p>该邮箱已被其他账号使用</p>');
+        }
+        return res.status(resultErr.status).send('<h2>确认链接无效</h2><p>' + resultErr.error + '</p>');
       }
 
-      res.send(EMAIL_CHANGE_SUCCESS_HTML(record.new_email));
+      res.send(EMAIL_CHANGE_SUCCESS_HTML(result.new_email));
+    });
+  });
+
+  router.post('/confirm-email-change', (req, res) => {
+    const token = req.query.token || req.body?.token;
+    confirmEmailChange(token, (err, result) => {
+      if (err) {
+        return res.status(err.status || 500).json({ error: err.error || '服务器错误' });
+      }
+      res.json({ message: '邮箱修改成功', new_email: result.new_email });
     });
   });
 }
