@@ -68,6 +68,9 @@
   }
 
   function escapeHtml(value) {
+    if (window.SafeDom && window.SafeDom.sanitize) {
+      return window.SafeDom.sanitize(value == null ? '' : String(value));
+    }
     const div = document.createElement('div');
     div.textContent = value == null ? '' : String(value);
     return div.innerHTML;
@@ -94,6 +97,9 @@
   }
 
   function api(method, path, body) {
+    if (window.api) {
+      return window.api(method, '/auth' + path, body);
+    }
     return requestJson('/api/auth' + path, {
       method: method,
       credentials: 'include',

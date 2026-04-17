@@ -11,7 +11,7 @@
     if (!newEmail || !password) return window.toast('请填写所有字段', 'error');
 
     try {
-      await window.api('POST', '/auth/change-email', { newEmail: newEmail, password: password });
+      await window.api('POST', '/auth/change-email', { new_email: newEmail, password: password });
       window.toast('验证邮件已发送到新邮箱，请查收并点击链接确认', 'success');
       document.getElementById('new-email').value = '';
       document.getElementById('email-password').value = '';

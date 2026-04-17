@@ -19,7 +19,8 @@
   function renderSessions(sessions) {
     var list = document.getElementById('sessions-list');
     var empty = document.getElementById('sessions-empty');
-    var escapeHtml = window.escapeHtml || function (value) { return value == null ? '' : String(value); };
+    var SafeDom = window.SafeDom;
+    var setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
     list.innerHTML = '';
     var others = sessions.filter(function (s) { return !s.is_current; });
     if (others.length === 0) {
@@ -32,16 +33,42 @@
     others.forEach(function (s) {
       var item = document.createElement('div');
       item.className = 'session-item';
-      item.innerHTML = [
-        '<div class="session-item__icon">',
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
-        '</div>',
-        '<div class="session-item__info">',
-          '<strong>' + escapeHtml(s.browser || '未知浏览器') + '</strong>',
-          '<span>' + escapeHtml(s.os || '未知系统') + ' · ' + escapeHtml(s.device_type || '未知设备') + ' · ' + new Date(s.created_at).toLocaleDateString('zh-CN') + '</span>',
-        '</div>',
-        '<button class="btn btn-ghost btn-sm" type="button" data-session-id="' + s.id + '" style="color:var(--error);">吊销</button>',
-      ].join('');
+
+      var iconDiv = document.createElement('div');
+      iconDiv.className = 'session-item__icon';
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+      svg.setAttribute('width', '20');
+      svg.setAttribute('height', '20');
+      svg.innerHTML = '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>';
+      iconDiv.appendChild(svg);
+      item.appendChild(iconDiv);
+
+      var infoDiv = document.createElement('div');
+      infoDiv.className = 'session-item__info';
+
+      var strong = document.createElement('strong');
+      setText(strong, s.browser || '未知浏览器');
+      infoDiv.appendChild(strong);
+
+      var span = document.createElement('span');
+      var dateStr = new Date(s.created_at).toLocaleDateString('zh-CN');
+      setText(span, (s.os || '未知系统') + ' · ' + (s.device_type || '未知设备') + ' · ' + dateStr);
+      infoDiv.appendChild(span);
+
+      item.appendChild(infoDiv);
+
+      var revokeBtn = document.createElement('button');
+      revokeBtn.className = 'btn btn-ghost btn-sm';
+      revokeBtn.type = 'button';
+      revokeBtn.dataset.sessionId = s.id;
+      revokeBtn.style.cssText = 'color:var(--error);';
+      setText(revokeBtn, '吊销');
+      item.appendChild(revokeBtn);
+
       list.appendChild(item);
     });
   }

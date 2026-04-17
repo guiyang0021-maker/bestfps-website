@@ -19,7 +19,8 @@
   function renderPresets(presets) {
     var grid = document.getElementById('presets-grid');
     var empty = document.getElementById('presets-empty');
-    var escapeHtml = window.escapeHtml || function (value) { return value == null ? '' : String(value); };
+    var SafeDom = window.SafeDom;
+    var setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
     grid.innerHTML = '';
     if (presets.length === 0) {
       empty.style.display = 'flex';
@@ -31,21 +32,66 @@
     presets.forEach(function (p) {
       var card = document.createElement('div');
       card.className = 'preset-card' + (p.is_default ? ' preset-card--default' : '');
-      card.innerHTML = [
-        '<div class="preset-card__header">',
-          '<div class="preset-card__name">' + escapeHtml(p.name) + '</div>',
-          (p.is_default ? '<span class="preset-card__badge">默认</span>' : ''),
-        '</div>',
-        '<p class="preset-card__desc">' + escapeHtml(p.description || '无描述') + '</p>',
-        '<div class="preset-card__meta">',
-          '<span>' + new Date(p.created_at).toLocaleDateString('zh-CN') + '</span>',
-        '</div>',
-        '<div class="preset-card__actions">',
-          '<button class="btn btn-primary btn-sm" type="button" data-preset-action="apply" data-preset-id="' + p.id + '">应用</button>',
-          (!p.is_default ? '<button class="btn btn-secondary btn-sm" type="button" data-preset-action="default" data-preset-id="' + p.id + '">设为默认</button>' : ''),
-          '<button class="btn btn-ghost btn-sm" type="button" data-preset-action="delete" data-preset-id="' + p.id + '" style="color:var(--error);">删除</button>',
-        '</div>',
-      ].join('');
+
+      var header = document.createElement('div');
+      header.className = 'preset-card__header';
+
+      var nameDiv = document.createElement('div');
+      nameDiv.className = 'preset-card__name';
+      setText(nameDiv, p.name);
+      header.appendChild(nameDiv);
+
+      if (p.is_default) {
+        var badge = document.createElement('span');
+        badge.className = 'preset-card__badge';
+        setText(badge, '默认');
+        header.appendChild(badge);
+      }
+      card.appendChild(header);
+
+      var descP = document.createElement('p');
+      descP.className = 'preset-card__desc';
+      setText(descP, p.description || '无描述');
+      card.appendChild(descP);
+
+      var meta = document.createElement('div');
+      meta.className = 'preset-card__meta';
+      var metaSpan = document.createElement('span');
+      setText(metaSpan, new Date(p.created_at).toLocaleDateString('zh-CN'));
+      meta.appendChild(metaSpan);
+      card.appendChild(meta);
+
+      var actions = document.createElement('div');
+      actions.className = 'preset-card__actions';
+
+      var applyBtn = document.createElement('button');
+      applyBtn.className = 'btn btn-primary btn-sm';
+      applyBtn.type = 'button';
+      applyBtn.dataset.presetAction = 'apply';
+      applyBtn.dataset.presetId = p.id;
+      setText(applyBtn, '应用');
+      actions.appendChild(applyBtn);
+
+      if (!p.is_default) {
+        var defaultBtn = document.createElement('button');
+        defaultBtn.className = 'btn btn-secondary btn-sm';
+        defaultBtn.type = 'button';
+        defaultBtn.dataset.presetAction = 'default';
+        defaultBtn.dataset.presetId = p.id;
+        setText(defaultBtn, '设为默认');
+        actions.appendChild(defaultBtn);
+      }
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-ghost btn-sm';
+      deleteBtn.type = 'button';
+      deleteBtn.dataset.presetAction = 'delete';
+      deleteBtn.dataset.presetId = p.id;
+      deleteBtn.style.cssText = 'color:var(--error);';
+      setText(deleteBtn, '删除');
+      actions.appendChild(deleteBtn);
+
+      card.appendChild(actions);
       grid.appendChild(card);
     });
   }
@@ -78,28 +124,62 @@
     var settings = window.collectSettingsFromUI();
     var shaderItems = document.getElementById('preset-preview-shader');
     var packItems = document.getElementById('preset-preview-packs');
+    var SafeDom = window.SafeDom;
+    var setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
     if (!shaderItems || !packItems) return;
 
     // Render shader settings
     var ss = settings.shader_settings || {};
-    var shaderHtml = '';
-    if (ss.dynamic_light) shaderHtml += '<span class="preset-preview__item enabled">动态光照 ✓</span>';
-    if (ss.smooth_light) shaderHtml += '<span class="preset-preview__item enabled">平滑光照 ✓</span>';
-    if (ss.clouds) shaderHtml += '<span class="preset-preview__item enabled">云彩渲染 ✓</span>';
-    shaderHtml += '<span class="preset-preview__item">粒子 ' + (ss.particles || 0) + '%</span>';
-    shaderHtml += '<span class="preset-preview__item">距离 ' + (ss.view_distance || 12) + ' ch</span>';
-    shaderItems.innerHTML = shaderHtml || '<span class="preset-preview__item disabled">无</span>';
+    shaderItems.innerHTML = '';
+    if (ss.dynamic_light) {
+      var dl = document.createElement('span');
+      dl.className = 'preset-preview__item enabled';
+      setText(dl, '动态光照 ✓');
+      shaderItems.appendChild(dl);
+    }
+    if (ss.smooth_light) {
+      var sl = document.createElement('span');
+      sl.className = 'preset-preview__item enabled';
+      setText(sl, '平滑光照 ✓');
+      shaderItems.appendChild(sl);
+    }
+    if (ss.clouds) {
+      var cl = document.createElement('span');
+      cl.className = 'preset-preview__item enabled';
+      setText(cl, '云彩渲染 ✓');
+      shaderItems.appendChild(cl);
+    }
+    var part = document.createElement('span');
+    part.className = 'preset-preview__item';
+    setText(part, '粒子 ' + (ss.particles || 0) + '%');
+    shaderItems.appendChild(part);
+    var dist = document.createElement('span');
+    dist.className = 'preset-preview__item';
+    setText(dist, '距离 ' + (ss.view_distance || 12) + ' ch');
+    shaderItems.appendChild(dist);
+
+    if (!shaderItems.children.length) {
+      var noShader = document.createElement('span');
+      noShader.className = 'preset-preview__item disabled';
+      setText(noShader, '无');
+      shaderItems.appendChild(noShader);
+    }
 
     // Render resource packs
     var packs = settings.resource_packs || [];
+    packItems.innerHTML = '';
     if (packs.length === 0) {
-      packItems.innerHTML = '<span class="preset-preview__item disabled">暂无</span>';
+      var noPacks = document.createElement('span');
+      noPacks.className = 'preset-preview__item disabled';
+      setText(noPacks, '暂无');
+      packItems.appendChild(noPacks);
     } else {
-      var packHtml = '';
       packs.forEach(function(p) {
-        packHtml += '<span class="preset-preview__item ' + (p.enabled ? 'enabled' : 'disabled') + '">' + p.name + (p.enabled ? ' ✓' : '') + '</span>';
+        var packSpan = document.createElement('span');
+        packSpan.className = 'preset-preview__item ' + (p.enabled ? 'enabled' : 'disabled');
+        setText(packSpan, p.name + (p.enabled ? ' ✓' : ''));
+        packItems.appendChild(packSpan);
       });
-      packItems.innerHTML = packHtml;
     }
   }
 

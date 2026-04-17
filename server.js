@@ -61,6 +61,20 @@ app.use(helmet.contentSecurityPolicy({
   directives: strictReportOnlyCspDirectives,
 }));
 
+// Additional security headers
+app.use(helmet.noSniff()); // X-Content-Type-Options: nosniff
+app.use(helmet.frameguard({ action: 'deny' })); // X-Frame-Options: DENY
+app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' })); // Referrer-Policy
+
+// Permissions-Policy: restrict sensitive browser features
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=()'
+  );
+  next();
+});
+
 // CORS
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
 app.use(cors({

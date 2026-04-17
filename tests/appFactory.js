@@ -26,6 +26,7 @@ function createTestApp(db, reloaded) {
   app.use('/api/share', reloaded.shareRouter);
   app.use('/api/announcements', reloaded.announcementsRouter);
   app.use('/api/admin', reloaded.adminRouter);
+  app.use('/api/hwid', reloaded.hwidRouter);
 
   return app;
 }

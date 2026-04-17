@@ -5,6 +5,7 @@ const express = require('express');
 const { db } = require('../db');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
+const { validate, rules } = require('../middleware/validator');
 const { cached, invalidate } = require('../middleware/cache');
 
 const ANNOUNCEMENT_TYPES = ['info', 'success', 'warning', 'error', 'feature', 'maintenance'];
@@ -112,13 +113,8 @@ router.post('/:id/dismiss', requireAuth, (req, res) => {
   });
 });
 
-router.post('/', requireAuth, requireAdmin, (req, res) => {
+router.post('/', requireAuth, requireAdmin, validate([rules.announcementTitle, rules.announcementContent, rules.announcementPriority]), (req, res) => {
   const { title, content, type, priority, start_at, expires_at } = req.body;
-
-  if (!title || !content) {
-    return res.status(400).json({ error: '标题和内容不能为空' });
-  }
-
   const announceType = ANNOUNCEMENT_TYPES.includes(type) ? type : 'info';
 
   db.run(
@@ -138,6 +134,19 @@ router.post('/', requireAuth, requireAdmin, (req, res) => {
 router.put('/:id', requireAuth, requireAdmin, (req, res) => {
   const { title, content, type, priority, start_at, expires_at } = req.body;
   const id = parseInt(req.params.id);
+
+  if (title !== undefined && (title.trim().length === 0 || title.length > 255)) {
+    return res.status(400).json({ error: '标题需 1-255 个字符' });
+  }
+  if (content !== undefined && (content.trim().length === 0 || content.length > 10000)) {
+    return res.status(400).json({ error: '内容需 1-10000 个字符' });
+  }
+  if (priority !== undefined && (!Number.isInteger(priority) || priority < 0 || priority > 10)) {
+    return res.status(400).json({ error: '优先级需在 0-10 之间' });
+  }
+  if (type !== undefined && !ANNOUNCEMENT_TYPES.includes(type)) {
+    return res.status(400).json({ error: '无效的公告类型' });
+  }
 
   const updates = [];
   const params = [];

@@ -5,7 +5,6 @@
   if (!core) return;
 
   const api = core.api;
-  const escapeHtml = core.escapeHtml;
   const getCsrfToken = core.getCsrfToken;
   const hide = core.hide;
   const requestJson = core.requestJson;
@@ -239,28 +238,51 @@
       return;
     }
 
-    let html = '';
+    container.innerHTML = '';
     sessions.forEach(function (session) {
       const isMobile = /mobile/i.test(String(session.device_type || ''));
-      html += [
-        '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light);">',
-        '<div style="font-size:1.5rem;">', isMobile ? '📱' : '💻', '</div>',
-        '<div style="flex:1;">',
-        '<div style="font-size:0.9375rem;font-weight:600;">', escapeHtml(session.os || 'Unknown'), ' / ', escapeHtml(session.browser || 'Unknown'), '</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);">',
-        escapeHtml(session.device_type || '未知设备'), ' · ',
-        escapeHtml(session.ip || 'Unknown IP'), ' · ',
-        escapeHtml(formatDate(session.created_at)),
-        '</div>',
-        '</div>',
-        session.is_current
-          ? '<span class="badge badge-success">当前</span>'
-          : '<button class="btn btn-danger" type="button" data-revoke-session-id="' + escapeHtml(session.id) + '" style="padding:6px 14px;font-size:0.8125rem;">吊销</button>',
-        '</div>',
-      ].join('');
-    });
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light);';
 
-    container.innerHTML = html;
+      const icon = document.createElement('div');
+      icon.style.fontSize = '1.5rem';
+      icon.textContent = isMobile ? '📱' : '💻';
+      item.appendChild(icon);
+
+      const info = document.createElement('div');
+      info.style.flex = '1';
+
+      const osBrowser = document.createElement('div');
+      osBrowser.style.fontSize = '0.9375rem';
+      osBrowser.style.fontWeight = '600';
+      osBrowser.textContent = (session.os || 'Unknown') + ' / ' + (session.browser || 'Unknown');
+      info.appendChild(osBrowser);
+
+      const meta = document.createElement('div');
+      meta.style.fontSize = '0.8125rem';
+      meta.style.color = 'var(--text-secondary)';
+      meta.textContent = (session.device_type || '未知设备') + ' · ' + (session.ip || 'Unknown IP') + ' · ' + formatDate(session.created_at);
+      info.appendChild(meta);
+
+      item.appendChild(info);
+
+      if (session.is_current) {
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-success';
+        badge.textContent = '当前';
+        item.appendChild(badge);
+      } else {
+        const revokeBtn = document.createElement('button');
+        revokeBtn.className = 'btn btn-danger';
+        revokeBtn.type = 'button';
+        revokeBtn.dataset.revokeSessionId = session.id;
+        revokeBtn.style.cssText = 'padding:6px 14px;font-size:0.8125rem;';
+        revokeBtn.textContent = '吊销';
+        item.appendChild(revokeBtn);
+      }
+
+      container.appendChild(item);
+    });
   }
 
   async function revokeSession(id) {
@@ -293,26 +315,41 @@
       return;
     }
 
-    let html = '';
+    container.innerHTML = '';
     history.forEach(function (item) {
       const isMobile = /mobile/i.test(String(item.device_type || ''));
-      html += [
-        '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light);">',
-        '<div style="font-size:1.25rem;">', isMobile ? '📱' : '💻', '</div>',
-        '<div style="flex:1;">',
-        '<div style="font-size:0.9375rem;font-weight:600;">', escapeHtml(item.browser || 'Unknown'), ' on ', escapeHtml(item.os || 'Unknown'), '</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);">',
-        escapeHtml(item.device_type || '未知设备'), ' · ',
-        escapeHtml(item.ip || 'Unknown IP'), ' · ',
-        escapeHtml(formatDate(item.created_at)),
-        '</div>',
-        '</div>',
-        '<span class="badge ', item.success ? 'badge-success' : 'badge-error', '">', item.success ? '成功' : '失败', '</span>',
-        '</div>',
-      ].join('');
-    });
+      const entry = document.createElement('div');
+      entry.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light);';
 
-    container.innerHTML = html;
+      const icon = document.createElement('div');
+      icon.style.fontSize = '1.25rem';
+      icon.textContent = isMobile ? '📱' : '💻';
+      entry.appendChild(icon);
+
+      const info = document.createElement('div');
+      info.style.flex = '1';
+
+      const device = document.createElement('div');
+      device.style.fontSize = '0.9375rem';
+      device.style.fontWeight = '600';
+      device.textContent = (item.browser || 'Unknown') + ' on ' + (item.os || 'Unknown');
+      info.appendChild(device);
+
+      const meta = document.createElement('div');
+      meta.style.fontSize = '0.8125rem';
+      meta.style.color = 'var(--text-secondary)';
+      meta.textContent = (item.device_type || '未知设备') + ' · ' + (item.ip || 'Unknown IP') + ' · ' + formatDate(item.created_at);
+      info.appendChild(meta);
+
+      entry.appendChild(info);
+
+      const statusBadge = document.createElement('span');
+      statusBadge.className = 'badge ' + (item.success ? 'badge-success' : 'badge-error');
+      statusBadge.textContent = item.success ? '成功' : '失败';
+      entry.appendChild(statusBadge);
+
+      container.appendChild(entry);
+    });
   }
 
   async function exportData(format) {

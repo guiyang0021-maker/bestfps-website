@@ -3,6 +3,7 @@
  */
 const { db } = require('../../db');
 const { requireAuth } = require('../../middleware/auth');
+const { validate, rules } = require('../../middleware/validator');
 
 function loadProfile(userId, callback) {
   db.get(
@@ -49,7 +50,7 @@ function setup(router) {
     });
   });
 
-  router.put('/profile', requireAuth, (req, res) => {
+  router.put('/profile', requireAuth, validate([rules.displayName]), (req, res) => {
     const {
       username,
       display_name,
@@ -63,22 +64,18 @@ function setup(router) {
     const updates = [];
     const params = [];
     const nextUsername = username === undefined ? undefined : String(username).trim();
-    const nextDisplayName = display_name === undefined ? undefined : String(display_name).trim();
 
     if (nextUsername !== undefined && (nextUsername.length < 3 || nextUsername.length > 20)) {
       return res.status(400).json({ error: '用户名长度为 3-20 个字符' });
-    }
-    if (nextDisplayName !== undefined && nextDisplayName.length > 50) {
-      return res.status(400).json({ error: '显示名称不能超过 50 个字符' });
     }
 
     if (nextUsername !== undefined) {
       updates.push('username = ?');
       params.push(nextUsername);
     }
-    if (nextDisplayName !== undefined) {
+    if (display_name !== undefined) {
       updates.push('display_name = ?');
-      params.push(nextDisplayName);
+      params.push(String(display_name).trim());
     }
     if (bio !== undefined) {
       updates.push('bio = ?');

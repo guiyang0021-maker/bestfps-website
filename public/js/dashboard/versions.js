@@ -22,7 +22,9 @@
   function renderVersions(versions) {
     var list = document.getElementById('versions-list');
     var empty = document.getElementById('versions-empty');
-    var escapeHtml = window.escapeHtml || function (value) { return value == null ? '' : String(value); };
+    var SafeDom = window.SafeDom;
+    var setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
+    var sanitize = SafeDom && SafeDom.sanitize ? SafeDom.sanitize : function(val) { return val == null ? '' : String(val); };
     if (!list) return;
     var skeleton = document.getElementById('versions-skeleton');
     if (skeleton) skeleton.style.display = 'none';
@@ -37,16 +39,43 @@
     versions.forEach(function (v) {
       var item = document.createElement('div');
       item.className = 'version-item';
-      item.innerHTML = [
-        '<div class="version-item__info">',
-          '<strong class="version-item__name">' + escapeHtml(v.name) + '</strong>',
-          '<span class="version-item__time">' + new Date(v.created_at).toLocaleString('zh-CN') + '</span>',
-        '</div>',
-        '<div class="version-item__actions">',
-          '<button class="btn btn-primary btn-sm" type="button" data-version-action="restore" data-version-id="' + v.id + '">恢复</button>',
-          '<button class="btn btn-ghost btn-sm" type="button" data-version-action="delete" data-version-id="' + v.id + '" style="color:var(--error);">删除</button>',
-        '</div>',
-      ].join('');
+
+      var infoDiv = document.createElement('div');
+      infoDiv.className = 'version-item__info';
+
+      var strong = document.createElement('strong');
+      strong.className = 'version-item__name';
+      setText(strong, sanitize(v.name));
+      infoDiv.appendChild(strong);
+
+      var timeSpan = document.createElement('span');
+      timeSpan.className = 'version-item__time';
+      setText(timeSpan, new Date(v.created_at).toLocaleString('zh-CN'));
+      infoDiv.appendChild(timeSpan);
+
+      item.appendChild(infoDiv);
+
+      var actionsDiv = document.createElement('div');
+      actionsDiv.className = 'version-item__actions';
+
+      var restoreBtn = document.createElement('button');
+      restoreBtn.className = 'btn btn-primary btn-sm';
+      restoreBtn.type = 'button';
+      restoreBtn.dataset.versionAction = 'restore';
+      restoreBtn.dataset.versionId = v.id;
+      setText(restoreBtn, '恢复');
+      actionsDiv.appendChild(restoreBtn);
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-ghost btn-sm';
+      deleteBtn.type = 'button';
+      deleteBtn.dataset.versionAction = 'delete';
+      deleteBtn.dataset.versionId = v.id;
+      deleteBtn.style.cssText = 'color:var(--error);';
+      setText(deleteBtn, '删除');
+      actionsDiv.appendChild(deleteBtn);
+
+      item.appendChild(actionsDiv);
       list.appendChild(item);
     });
   }

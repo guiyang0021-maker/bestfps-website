@@ -27,6 +27,7 @@ const DEPENDENT_MODULES = [
   '../routes/share',
   '../routes/announcements',
   '../routes/admin',
+  '../routes/hwid',
 ];
 
 /**
@@ -201,11 +202,46 @@ function createTestDb() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE hwid_bindings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      hwid_hash TEXT NOT NULL,
+      hwid_preview TEXT DEFAULT '',
+      device_name TEXT DEFAULT '',
+      os_name TEXT DEFAULT '',
+      agent_version TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active',
+      bind_source TEXT DEFAULT 'agent',
+      last_ip TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      revoked_at DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE hwid_bind_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      requested_ip TEXT DEFAULT '',
+      requested_user_agent TEXT DEFAULT '',
+      expires_at DATETIME NOT NULL,
+      used_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX idx_activities_user ON user_activities(user_id, created_at DESC);
     CREATE INDEX idx_versions_user ON config_versions(user_id, created_at DESC);
     CREATE INDEX idx_users_role ON users(role);
     CREATE INDEX idx_users_status ON users(status);
     CREATE INDEX idx_user_sessions_user ON user_sessions(user_id);
+    CREATE UNIQUE INDEX idx_hwid_bindings_user_active ON hwid_bindings(user_id) WHERE status = 'active';
+    CREATE INDEX idx_hwid_bindings_user ON hwid_bindings(user_id, status, created_at DESC);
+    CREATE INDEX idx_hwid_bindings_hash ON hwid_bindings(hwid_hash);
+    CREATE INDEX idx_hwid_bind_tokens_user ON hwid_bind_tokens(user_id, created_at DESC);
+    CREATE INDEX idx_hwid_bind_tokens_token ON hwid_bind_tokens(token);
   `);
 
   return db;
@@ -259,6 +295,7 @@ function setupTestDb() {
   const shareRouter = require('../routes/share');
   const announcementsRouter = require('../routes/announcements');
   const adminRouter = require('../routes/admin');
+  const hwidRouter = require('../routes/hwid');
 
   return {
     db: wrappedDb,
@@ -273,6 +310,7 @@ function setupTestDb() {
       shareRouter,
       announcementsRouter,
       adminRouter,
+      hwidRouter,
     },
   };
 }
@@ -297,6 +335,8 @@ function cleanTestDb(db) {
     'config_presets',
     'config_versions',
     'downloads',
+    'hwid_bind_tokens',
+    'hwid_bindings',
     'announcements',
     'users',
   ];

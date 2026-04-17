@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { db, logActivity } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { cache, invalidate } = require('../middleware/cache');
+const { validate, rules } = require('../middleware/validator');
 
 const router = express.Router();
 const SHARE_CACHE_TTL = 1800;
@@ -53,12 +54,8 @@ function upsertUserSettings(userId, shaderSettings, resourcePacks, callback) {
   });
 }
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, validate([rules.presetName]), (req, res) => {
   const { name, description, shader_settings, resource_packs } = req.body;
-
-  if (!name || name.trim().length === 0) {
-    return res.status(400).json({ error: '分享名称不能为空' });
-  }
 
   const token = crypto.randomBytes(16).toString('base64url');
   const expiresAt = req.body.expires_at || null;

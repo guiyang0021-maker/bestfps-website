@@ -21,6 +21,8 @@
   function renderActivities(activities) {
     var list = document.getElementById('activity-feed-list');
     var empty = document.getElementById('activity-feed-empty');
+    var SafeDom = window.SafeDom;
+    var setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
     if (!list) return;
     list.innerHTML = '';
     if (activities.length === 0) {
@@ -52,15 +54,35 @@
       var timeAgo = getTimeAgo(new Date(a.created_at));
       var item = document.createElement('div');
       item.className = 'activity-item';
-      item.innerHTML = [
-        '<div class="activity-item__icon" style="background: ' + meta.color + '1a; color: ' + meta.color + ';">',
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">' + meta.icon + '</svg>',
-        '</div>',
-        '<div class="activity-item__content">',
-          '<span class="activity-item__desc">' + a.description + '</span>',
-          '<span class="activity-item__time">' + timeAgo + '</span>',
-        '</div>',
-      ].join('');
+
+      var iconDiv = document.createElement('div');
+      iconDiv.className = 'activity-item__icon';
+      iconDiv.style.cssText = 'background: ' + meta.color + '1a; color: ' + meta.color + ';';
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+      svg.setAttribute('width', '16');
+      svg.setAttribute('height', '16');
+      svg.innerHTML = meta.icon;
+      iconDiv.appendChild(svg);
+      item.appendChild(iconDiv);
+
+      var contentDiv = document.createElement('div');
+      contentDiv.className = 'activity-item__content';
+
+      var descSpan = document.createElement('span');
+      descSpan.className = 'activity-item__desc';
+      setText(descSpan, a.description);
+      contentDiv.appendChild(descSpan);
+
+      var timeSpan = document.createElement('span');
+      timeSpan.className = 'activity-item__time';
+      setText(timeSpan, timeAgo);
+      contentDiv.appendChild(timeSpan);
+
+      item.appendChild(contentDiv);
       list.appendChild(item);
     });
   }

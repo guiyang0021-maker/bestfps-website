@@ -2,6 +2,11 @@
 (function () {
   'use strict';
 
+  // ── 依赖检查 ────────────────────────────────────────────
+  if (typeof SafeDom === 'undefined') {
+    console.error('[AdminUsers] SafeDom not loaded');
+  }
+
   // ── 模块状态 ─────────────────────────────────────────
   let currentPage = 1;
   let searchQuery = '';
@@ -167,30 +172,112 @@
 
     // 更新总数字 badge
     const badge = container?.querySelector('#users-total-badge');
-    if (badge) badge.textContent = badgeTotal;
+    if (badge) SafeDom.setText(badge, badgeTotal);
 
     if (!users.length) {
-      tableEl.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--color-text-muted)">暂无用户</td></tr>';
+      tableEl.innerHTML = '';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 8;
+      td.style.cssText = 'text-align:center;padding:40px;color:var(--color-text-muted)';
+      SafeDom.setText(td, '暂无用户');
+      tr.appendChild(td);
+      tableEl.appendChild(tr);
     } else {
-      tableEl.innerHTML = users.map(u => `
-        <tr data-user-id="${u.id}">
-          <td><span style="color:var(--color-text-muted);font-size:13px">${u.id}</span></td>
-          <td><strong>${esc(u.username)}</strong></td>
-          <td>${esc(u.email)}</td>
-          <td><span class="badge badge--${u.role}">${esc(u.role)}</span></td>
-          <td><span class="badge badge--${u.status}">${esc(u.status)}</span></td>
-          <td>${esc(u.last_login_ip || '—')}</td>
-          <td>${esc(formatDate(u.created_at))}</td>
-          <td>
-            <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <button class="btn btn--small" data-action="detail" data-user-id="${u.id}" title="查看详情">详情</button>
-              <button class="btn btn--small" data-action="role" data-user-id="${u.id}" title="修改角色">角色</button>
-              <button class="btn btn--small ${u.status === 'suspended' || u.status === 'banned' ? 'btn--success' : 'btn--warning'}" data-action="suspend" data-user-id="${u.id}" title="${u.status === 'suspended' || u.status === 'banned' ? '解封' : '封禁'}">${u.status === 'suspended' || u.status === 'banned' ? '解封' : '封禁'}</button>
-              <button class="btn btn--small btn--danger" data-action="delete" data-user-id="${u.id}" title="删除用户">删除</button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
+      tableEl.innerHTML = '';
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.dataset.userId = u.id;
+
+        // ID
+        const tdId = document.createElement('td');
+        const idSpan = document.createElement('span');
+        idSpan.style.cssText = 'color:var(--color-text-muted);font-size:13px';
+        SafeDom.setText(idSpan, String(u.id));
+        tdId.appendChild(idSpan);
+        tr.appendChild(tdId);
+
+        // Username
+        const tdUsername = document.createElement('td');
+        const usernameStrong = document.createElement('strong');
+        SafeDom.setText(usernameStrong, u.username);
+        tdUsername.appendChild(usernameStrong);
+        tr.appendChild(tdUsername);
+
+        // Email
+        const tdEmail = document.createElement('td');
+        SafeDom.setText(tdEmail, u.email);
+        tr.appendChild(tdEmail);
+
+        // Role badge
+        const tdRole = document.createElement('td');
+        const roleBadge = document.createElement('span');
+        roleBadge.className = 'badge badge--' + (u.role || 'user');
+        SafeDom.setText(roleBadge, u.role);
+        tdRole.appendChild(roleBadge);
+        tr.appendChild(tdRole);
+
+        // Status badge
+        const tdStatus = document.createElement('td');
+        const statusBadge = document.createElement('span');
+        statusBadge.className = 'badge badge--' + (u.status || 'active');
+        SafeDom.setText(statusBadge, u.status);
+        tdStatus.appendChild(statusBadge);
+        tr.appendChild(tdStatus);
+
+        // Last login IP
+        const tdIp = document.createElement('td');
+        SafeDom.setText(tdIp, u.last_login_ip || '—');
+        tr.appendChild(tdIp);
+
+        // Created at
+        const tdCreated = document.createElement('td');
+        SafeDom.setText(tdCreated, formatDate(u.created_at));
+        tr.appendChild(tdCreated);
+
+        // Actions
+        const tdActions = document.createElement('td');
+        const divActions = document.createElement('div');
+        divActions.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap';
+
+        const detailBtn = document.createElement('button');
+        detailBtn.className = 'btn btn--small';
+        detailBtn.dataset.action = 'detail';
+        detailBtn.dataset.userId = u.id;
+        detailBtn.title = '查看详情';
+        SafeDom.setText(detailBtn, '详情');
+        divActions.appendChild(detailBtn);
+
+        const roleBtn = document.createElement('button');
+        roleBtn.className = 'btn btn--small';
+        roleBtn.dataset.action = 'role';
+        roleBtn.dataset.userId = u.id;
+        roleBtn.title = '修改角色';
+        SafeDom.setText(roleBtn, '角色');
+        divActions.appendChild(roleBtn);
+
+        const suspendBtn = document.createElement('button');
+        const isSuspended = u.status === 'suspended' || u.status === 'banned';
+        suspendBtn.className = 'btn btn--small ' + (isSuspended ? 'btn--success' : 'btn--warning');
+        suspendBtn.dataset.action = 'suspend';
+        suspendBtn.dataset.userId = u.id;
+        suspendBtn.title = isSuspended ? '解封' : '封禁';
+        SafeDom.setText(suspendBtn, isSuspended ? '解封' : '封禁');
+        divActions.appendChild(suspendBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn btn--small btn--danger';
+        deleteBtn.dataset.action = 'delete';
+        deleteBtn.dataset.userId = u.id;
+        deleteBtn.title = '删除用户';
+        SafeDom.setText(deleteBtn, '删除');
+        divActions.appendChild(deleteBtn);
+
+        tdActions.appendChild(divActions);
+        tr.appendChild(tdActions);
+
+        tableEl.appendChild(tr);
+      });
     }
 
     renderPagination(paginationEl, {

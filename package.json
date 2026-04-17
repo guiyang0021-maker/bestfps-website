@@ -9,6 +9,8 @@
     "build": "node build/build.js",
     "build:watch": "node build/build.js --watch",
     "build:prod": "NODE_ENV=production node build/build.js",
+    "build:hwid:win": "node tools/hwid-agent/build-windows.js",
+    "verify:hwid:cpp": "node tools/hwid-agent/verify-cpp-delivery.js",
     "test": "NODE_ENV=test jest --testTimeout=10000 --forceExit",
     "test:playwright": "npx playwright test",
     "test:playwright:ui": "npx playwright test --ui",

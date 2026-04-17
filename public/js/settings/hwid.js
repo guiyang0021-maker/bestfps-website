@@ -45,47 +45,88 @@
     const bindings = Array.isArray(data.bindings) ? data.bindings : [];
     updateBindButtonLabel(data.agent_format);
 
+    container.innerHTML = '';
+
     if (!bindings.length) {
-      container.innerHTML = [
-        '<div style="padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);">',
-        '<div style="font-size:0.9375rem;font-weight:600;margin-bottom:6px;">当前还没有绑定设备</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);">',
-        '点击上方按钮后，浏览器会下载绑定工具和一次性令牌文件。运行工具后会自动把当前设备绑定到账号。',
-        '</div>',
-        '</div>',
-      ].join('');
+      const emptyDiv = document.createElement('div');
+      emptyDiv.style.cssText = 'padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);';
+      const emptyTitle = document.createElement('div');
+      emptyTitle.style.fontSize = '0.9375rem';
+      emptyTitle.style.fontWeight = '600';
+      emptyTitle.style.marginBottom = '6px';
+      emptyTitle.textContent = '当前还没有绑定设备';
+      emptyDiv.appendChild(emptyTitle);
+      const emptyDesc = document.createElement('div');
+      emptyDesc.style.fontSize = '0.8125rem';
+      emptyDesc.style.color = 'var(--text-secondary)';
+      emptyDesc.textContent = '点击上方按钮后，浏览器会下载绑定工具和一次性令牌文件。运行工具后会自动把当前设备绑定到账号。';
+      emptyDiv.appendChild(emptyDesc);
+      container.appendChild(emptyDiv);
       return;
     }
 
-    container.innerHTML = bindings.map(function (binding) {
+    const SafeDom = window.SafeDom;
+    const setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
+    const sanitize = SafeDom && SafeDom.sanitize ? SafeDom.sanitize : function(val) { return val == null ? '' : String(val); };
+
+    bindings.forEach(function (binding) {
       const active = binding.status === 'active';
       const lastSeen = binding.last_seen_at ? new Date(binding.last_seen_at).toLocaleString('zh-CN') : '—';
       const createdAt = binding.created_at ? new Date(binding.created_at).toLocaleString('zh-CN') : '—';
-      return [
-        '<div style="padding:16px 0;border-bottom:1px solid var(--border-light);">',
-        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">',
-        '<div>',
-        '<div style="font-size:0.95rem;font-weight:600;">', core.escapeHtml(binding.device_name || 'Unknown Device'), '</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);margin-top:4px;">',
-        'HWID: ', core.escapeHtml(binding.hwid_preview || '—'), ' · ', core.escapeHtml(binding.os_name || 'Unknown OS'),
-        '</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);margin-top:4px;">',
-        '绑定时间：', core.escapeHtml(createdAt), ' · 最近上报：', core.escapeHtml(lastSeen),
-        '</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);margin-top:4px;">',
-        '最近 IP：', core.escapeHtml(binding.last_ip || '—'), ' · Agent：', core.escapeHtml(binding.agent_version || '—'),
-        '</div>',
-        '</div>',
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">',
-        '<span class="badge ', active ? 'badge-success' : 'badge-warning', '">', active ? '已绑定' : '已解绑', '</span>',
-        active
-          ? '<button class="btn btn-secondary" type="button" data-hwid-revoke-id="' + core.escapeHtml(binding.id) + '" style="padding:6px 14px;font-size:0.8125rem;">解绑</button>'
-          : '',
-        '</div>',
-        '</div>',
-        '</div>',
-      ].join('');
-    }).join('');
+
+      const item = document.createElement('div');
+      item.style.cssText = 'padding:16px 0;border-bottom:1px solid var(--border-light);';
+
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;';
+
+      const info = document.createElement('div');
+
+      const deviceName = document.createElement('div');
+      deviceName.style.fontSize = '0.95rem';
+      deviceName.style.fontWeight = '600';
+      setText(deviceName, sanitize(binding.device_name || 'Unknown Device'));
+      info.appendChild(deviceName);
+
+      const hwidRow = document.createElement('div');
+      hwidRow.style.cssText = 'font-size:0.8125rem;color:var(--text-secondary);margin-top:4px;';
+      setText(hwidRow, 'HWID: ' + sanitize(binding.hwid_preview || '—') + ' · ' + sanitize(binding.os_name || 'Unknown OS'));
+      info.appendChild(hwidRow);
+
+      const createdRow = document.createElement('div');
+      createdRow.style.cssText = 'font-size:0.8125rem;color:var(--text-secondary);margin-top:4px;';
+      setText(createdRow, '绑定时间：' + sanitize(createdAt) + ' · 最近上报：' + sanitize(lastSeen));
+      info.appendChild(createdRow);
+
+      const ipRow = document.createElement('div');
+      ipRow.style.cssText = 'font-size:0.8125rem;color:var(--text-secondary);margin-top:4px;';
+      setText(ipRow, '最近 IP：' + sanitize(binding.last_ip || '—') + ' · Agent：' + sanitize(binding.agent_version || '—'));
+      info.appendChild(ipRow);
+
+      row.appendChild(info);
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:8px;';
+
+      const statusBadge = document.createElement('span');
+      statusBadge.className = 'badge ' + (active ? 'badge-success' : 'badge-warning');
+      statusBadge.textContent = active ? '已绑定' : '已解绑';
+      actions.appendChild(statusBadge);
+
+      if (active) {
+        const revokeBtn = document.createElement('button');
+        revokeBtn.className = 'btn btn-secondary';
+        revokeBtn.type = 'button';
+        revokeBtn.dataset.hwidRevokeId = binding.id;
+        revokeBtn.style.cssText = 'padding:6px 14px;font-size:0.8125rem;';
+        revokeBtn.textContent = '解绑';
+        actions.appendChild(revokeBtn);
+      }
+
+      row.appendChild(actions);
+      item.appendChild(row);
+      container.appendChild(item);
+    });
   }
 
   async function prepareHwidBinding() {

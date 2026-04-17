@@ -19,7 +19,8 @@
   function renderShares(shares) {
     var list = document.getElementById('share-list');
     var empty = document.getElementById('share-empty');
-    var escapeHtml = window.escapeHtml || function (value) { return value == null ? '' : String(value); };
+    var SafeDom = window.SafeDom;
+    var setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
     list.innerHTML = '';
     var active = shares.filter(function (s) { return !s.is_expired; });
     if (active.length === 0) {
@@ -32,16 +33,42 @@
     active.forEach(function (s) {
       var item = document.createElement('div');
       item.className = 'share-item';
-      item.innerHTML = [
-        '<div class="share-item__info">',
-          '<strong>' + escapeHtml(s.name) + '</strong>',
-          '<span>' + escapeHtml(s.description || '无描述') + ' · ' + new Date(s.created_at).toLocaleDateString('zh-CN') + '</span>',
-        '</div>',
-        '<div class="share-item__actions">',
-          '<button class="btn btn-secondary btn-sm" type="button" data-share-action="copy" data-share-token="' + escapeHtml(s.token) + '">复制链接</button>',
-          '<button class="btn btn-ghost btn-sm" type="button" data-share-action="delete" data-share-token="' + escapeHtml(s.token) + '" style="color:var(--error);">删除</button>',
-        '</div>',
-      ].join('');
+
+      var infoDiv = document.createElement('div');
+      infoDiv.className = 'share-item__info';
+
+      var strong = document.createElement('strong');
+      setText(strong, s.name);
+      infoDiv.appendChild(strong);
+
+      var span = document.createElement('span');
+      var dateStr = new Date(s.created_at).toLocaleDateString('zh-CN');
+      setText(span, (s.description || '无描述') + ' · ' + dateStr);
+      infoDiv.appendChild(span);
+
+      item.appendChild(infoDiv);
+
+      var actionsDiv = document.createElement('div');
+      actionsDiv.className = 'share-item__actions';
+
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'btn btn-secondary btn-sm';
+      copyBtn.type = 'button';
+      copyBtn.dataset.shareAction = 'copy';
+      copyBtn.dataset.shareToken = s.token;
+      setText(copyBtn, '复制链接');
+      actionsDiv.appendChild(copyBtn);
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-ghost btn-sm';
+      deleteBtn.type = 'button';
+      deleteBtn.dataset.shareAction = 'delete';
+      deleteBtn.dataset.shareToken = s.token;
+      deleteBtn.style.cssText = 'color:var(--error);';
+      setText(deleteBtn, '删除');
+      actionsDiv.appendChild(deleteBtn);
+
+      item.appendChild(actionsDiv);
       list.appendChild(item);
     });
   }

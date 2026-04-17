@@ -27,6 +27,8 @@
     var table = document.getElementById('history-table');
     var empty = document.getElementById('history-empty');
     var pagination = document.getElementById('history-pagination');
+    var SafeDom = window.SafeDom;
+    var setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
 
     currentPage = page;
     currentTotalPages = totalPages;
@@ -47,14 +49,40 @@
 
     history.forEach(function (h) {
       var tr = document.createElement('tr');
-      tr.innerHTML = [
-        '<td>' + new Date(h.created_at).toLocaleString('zh-CN') + '</td>',
-        '<td><code style="font-size:0.8125rem;">' + (h.ip || '—') + '</code></td>',
-        '<td><span class="device-badge">' + (h.device_type || '未知') + '</span></td>',
-        '<td>' + (h.browser || '未知') + '</td>',
-        '<td>' + (h.os || '未知') + '</td>',
-        '<td><span class="status-badge ' + (h.success ? 'status-badge--success' : 'status-badge--error') + '">' + (h.success ? '成功' : '失败') + '</span></td>',
-      ].join('');
+
+      var tdTime = document.createElement('td');
+      setText(tdTime, new Date(h.created_at).toLocaleString('zh-CN'));
+      tr.appendChild(tdTime);
+
+      var tdIp = document.createElement('td');
+      var code = document.createElement('code');
+      code.style.fontSize = '0.8125rem';
+      setText(code, h.ip || '—');
+      tdIp.appendChild(code);
+      tr.appendChild(tdIp);
+
+      var tdDevice = document.createElement('td');
+      var deviceSpan = document.createElement('span');
+      deviceSpan.className = 'device-badge';
+      setText(deviceSpan, h.device_type || '未知');
+      tdDevice.appendChild(deviceSpan);
+      tr.appendChild(tdDevice);
+
+      var tdBrowser = document.createElement('td');
+      setText(tdBrowser, h.browser || '未知');
+      tr.appendChild(tdBrowser);
+
+      var tdOs = document.createElement('td');
+      setText(tdOs, h.os || '未知');
+      tr.appendChild(tdOs);
+
+      var tdStatus = document.createElement('td');
+      var statusSpan = document.createElement('span');
+      statusSpan.className = 'status-badge ' + (h.success ? 'status-badge--success' : 'status-badge--error');
+      setText(statusSpan, h.success ? '成功' : '失败');
+      tdStatus.appendChild(statusSpan);
+      tr.appendChild(tdStatus);
+
       tbody.appendChild(tr);
     });
 

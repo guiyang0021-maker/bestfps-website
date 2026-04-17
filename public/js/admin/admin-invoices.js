@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  // ── 依赖检查 ────────────────────────────────────────────
+  if (typeof SafeDom === 'undefined') {
+    console.error('[AdminInvoices] SafeDom not loaded');
+  }
+
   let container = null;
   let tableEl = null;
   let paginationEl = null;
@@ -11,7 +16,7 @@
   let controller = null;
 
   const { apiFetch } = window.AdminApi;
-  const { esc, createDebounce, formatDate } = window.AdminUtils;
+  const { createDebounce, formatDate } = window.AdminUtils;
   const { showSkeleton, toast, renderPagination } = window.AdminUI;
   const INVOICE_TYPES = Object.freeze({
     personal: '个人普通发票',
@@ -92,7 +97,14 @@
       if (data.__aborted || data.__unauthorized) return;
       renderTable(data);
     } catch (err) {
-      tableEl.innerHTML = '<tr><td colspan="9" class="table-empty">加载失败: ' + esc(err.message) + '</td></tr>';
+      tableEl.innerHTML = '';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 9;
+      td.className = 'table-empty';
+      SafeDom.setText(td, '加载失败: ' + err.message);
+      tr.appendChild(td);
+      tableEl.appendChild(tr);
     }
   }
 
@@ -103,28 +115,80 @@
     const limit = Math.max(1, Number(data.limit || 20));
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const badge = container.querySelector('#invoices-total-badge');
-    if (badge) badge.textContent = total ? `共 ${total} 条申请` : '0';
+    if (badge) SafeDom.setText(badge, total ? `共 ${total} 条申请` : '0');
 
     if (!invoices.length) {
-      tableEl.innerHTML = '<tr><td colspan="9" class="table-empty">暂无开票申请</td></tr>';
+      tableEl.innerHTML = '';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 9;
+      td.className = 'table-empty';
+      SafeDom.setText(td, '暂无开票申请');
+      tr.appendChild(td);
+      tableEl.appendChild(tr);
     } else {
-      tableEl.innerHTML = invoices.map((invoice) => {
+      tableEl.innerHTML = '';
+      invoices.forEach((invoice) => {
         const meta = getStatusMeta(invoice.status);
         const typeLabel = getTypeLabel(invoice.invoice_type, invoice.invoice_type_label);
-        return `
-          <tr>
-            <td>${esc(invoice.id)}</td>
-            <td>${esc(invoice.order_no)}</td>
-            <td>${esc(invoice.username || '—')}</td>
-            <td>${esc(invoice.title)}</td>
-            <td>${esc(typeLabel)}</td>
-            <td>￥${esc(Number(invoice.amount || 0).toFixed(2))}</td>
-            <td><span class="badge ${meta.cls}">${meta.label}</span></td>
-            <td>${esc(formatDate(invoice.created_at))}</td>
-            <td><button class="btn btn--small" type="button" data-invoice-id="${invoice.id}">处理</button></td>
-          </tr>
-        `;
-      }).join('');
+
+        const tr = document.createElement('tr');
+
+        // ID
+        const tdId = document.createElement('td');
+        SafeDom.setText(tdId, String(invoice.id));
+        tr.appendChild(tdId);
+
+        // Order no
+        const tdOrder = document.createElement('td');
+        SafeDom.setText(tdOrder, invoice.order_no);
+        tr.appendChild(tdOrder);
+
+        // Username
+        const tdUsername = document.createElement('td');
+        SafeDom.setText(tdUsername, invoice.username || '—');
+        tr.appendChild(tdUsername);
+
+        // Title
+        const tdTitle = document.createElement('td');
+        SafeDom.setText(tdTitle, invoice.title);
+        tr.appendChild(tdTitle);
+
+        // Type
+        const tdType = document.createElement('td');
+        SafeDom.setText(tdType, typeLabel);
+        tr.appendChild(tdType);
+
+        // Amount
+        const tdAmount = document.createElement('td');
+        SafeDom.setText(tdAmount, '¥' + Number(invoice.amount || 0).toFixed(2));
+        tr.appendChild(tdAmount);
+
+        // Status badge
+        const tdStatus = document.createElement('td');
+        const statusBadge = document.createElement('span');
+        statusBadge.className = 'badge ' + meta.cls;
+        SafeDom.setText(statusBadge, meta.label);
+        tdStatus.appendChild(statusBadge);
+        tr.appendChild(tdStatus);
+
+        // Created at
+        const tdCreated = document.createElement('td');
+        SafeDom.setText(tdCreated, formatDate(invoice.created_at));
+        tr.appendChild(tdCreated);
+
+        // Action button
+        const tdAction = document.createElement('td');
+        const actionBtn = document.createElement('button');
+        actionBtn.className = 'btn btn--small';
+        actionBtn.type = 'button';
+        actionBtn.dataset.invoiceId = invoice.id;
+        SafeDom.setText(actionBtn, '处理');
+        tdAction.appendChild(actionBtn);
+        tr.appendChild(tdAction);
+
+        tableEl.appendChild(tr);
+      });
     }
 
     renderPagination(paginationEl, {
@@ -145,14 +209,23 @@
       document.getElementById('invoice-admin-no').value = invoice.invoice_no || '';
       document.getElementById('invoice-admin-download-url').value = invoice.download_url || '';
       document.getElementById('invoice-admin-note').value = invoice.admin_note || '';
-      document.getElementById('invoice-meta').innerHTML = [
-        `<div><strong>用户：</strong>${esc(invoice.username || '—')} (${esc(invoice.email)})</div>`,
-        `<div><strong>订单号：</strong>${esc(invoice.order_no)}</div>`,
-        `<div><strong>抬头：</strong>${esc(invoice.title)} · ${esc(getTypeLabel(invoice.invoice_type, invoice.invoice_type_label))}</div>`,
-        `<div><strong>税号：</strong>${esc(invoice.tax_no || '—')}</div>`,
-        `<div><strong>金额：</strong>￥${esc(Number(invoice.amount || 0).toFixed(2))}</div>`,
-        `<div><strong>备注：</strong>${esc(invoice.notes || '—')}</div>`,
-      ].join('');
+
+      const metaContainer = document.getElementById('invoice-meta');
+      metaContainer.innerHTML = '';
+      const addRow = (label, value) => {
+        const div = document.createElement('div');
+        const strong = document.createElement('strong');
+        SafeDom.setText(strong, label);
+        div.appendChild(strong);
+        SafeDom.setText(div, value ? ' ' + value : ' —');
+        metaContainer.appendChild(div);
+      };
+      addRow('用户：', invoice.username ? `${invoice.username} (${invoice.email})` : null);
+      addRow('订单号：', invoice.order_no);
+      addRow('抬头：', invoice.title + (invoice.invoice_type_label ? ' · ' + invoice.invoice_type_label : ''));
+      addRow('税号：', invoice.tax_no || null);
+      addRow('金额：', '¥' + Number(invoice.amount || 0).toFixed(2));
+      addRow('备注：', invoice.notes || null);
 
       if (window.AdminCore) {
         window.AdminCore.openModal('invoice-modal', triggerEl);

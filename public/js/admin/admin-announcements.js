@@ -2,6 +2,11 @@
 (function () {
   'use strict';
 
+  // ── 依赖检查 ────────────────────────────────────────────
+  if (typeof SafeDom === 'undefined') {
+    console.error('[AdminAnnouncements] SafeDom not loaded');
+  }
+
   // ── 模块状态 ─────────────────────────────────────────
   let editingId = null;
   let isDirty = false;
@@ -101,24 +106,80 @@
     const listEl = container.querySelector('[data-list="announcements"]');
     if (!listEl) return;
     if (!announcements.length) {
-      listEl.innerHTML = '<tr><td colspan="6" class="table-empty">暂无公告</td></tr>';
+      listEl.innerHTML = '';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 6;
+      td.className = 'table-empty';
+      SafeDom.setText(td, '暂无公告');
+      tr.appendChild(td);
+      listEl.appendChild(tr);
       return;
     }
-    listEl.innerHTML = announcements.map(a => `
-      <tr data-id="${a.id}">
-        <td>${esc(String(a.priority ?? 0))}</td>
-        <td>${esc(a.title)}</td>
-        <td><span class="badge badge--${esc(a.type)}">${esc(a.type)}</span></td>
-        <td>${a.expires_at ? esc(formatDate(a.expires_at)) : '长期有效'}</td>
-        <td>${esc(formatDate(a.created_at))}</td>
-        <td>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn--small" type="button" data-action="edit" data-id="${a.id}">编辑</button>
-            <button class="btn btn--small btn--danger" type="button" data-action="delete" data-id="${a.id}" data-title="${esc(a.title)}">删除</button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    listEl.innerHTML = '';
+    announcements.forEach(a => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = a.id;
+
+      // Priority
+      const tdPriority = document.createElement('td');
+      SafeDom.setText(tdPriority, String(a.priority ?? 0));
+      tr.appendChild(tdPriority);
+
+      // Title
+      const tdTitle = document.createElement('td');
+      SafeDom.setText(tdTitle, a.title);
+      tr.appendChild(tdTitle);
+
+      // Type badge
+      const tdType = document.createElement('td');
+      const typeBadge = document.createElement('span');
+      typeBadge.className = 'badge badge--' + (a.type || 'info');
+      SafeDom.setText(typeBadge, a.type);
+      tdType.appendChild(typeBadge);
+      tr.appendChild(tdType);
+
+      // Expires at
+      const tdExpires = document.createElement('td');
+      if (a.expires_at) {
+        SafeDom.setText(tdExpires, formatDate(a.expires_at));
+      } else {
+        SafeDom.setText(tdExpires, '长期有效');
+      }
+      tr.appendChild(tdExpires);
+
+      // Created at
+      const tdCreated = document.createElement('td');
+      SafeDom.setText(tdCreated, formatDate(a.created_at));
+      tr.appendChild(tdCreated);
+
+      // Actions
+      const tdActions = document.createElement('td');
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;gap:4px';
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn--small';
+      editBtn.type = 'button';
+      editBtn.dataset.action = 'edit';
+      editBtn.dataset.id = a.id;
+      SafeDom.setText(editBtn, '编辑');
+      div.appendChild(editBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn--small btn--danger';
+      deleteBtn.type = 'button';
+      deleteBtn.dataset.action = 'delete';
+      deleteBtn.dataset.id = a.id;
+      deleteBtn.dataset.title = a.title || '';
+      SafeDom.setText(deleteBtn, '删除');
+      div.appendChild(deleteBtn);
+
+      tdActions.appendChild(div);
+      tr.appendChild(tdActions);
+
+      listEl.appendChild(tr);
+    });
   }
 
   // ── 创建模态框 ────────────────────────────────────────

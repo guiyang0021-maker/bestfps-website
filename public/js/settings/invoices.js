@@ -80,41 +80,99 @@
       return;
     }
 
-    container.innerHTML = invoices.map(function (invoice) {
+    const SafeDom = window.SafeDom;
+    const setText = SafeDom && SafeDom.setText ? SafeDom.setText : function(el, val) { el.textContent = val || ''; };
+    const sanitize = SafeDom && SafeDom.sanitize ? SafeDom.sanitize : function(val) { return val == null ? '' : String(val); };
+
+    container.innerHTML = '';
+
+    invoices.forEach(function (invoice) {
       const meta = getInvoiceStatusMeta(invoice.status);
       const canCancel = invoice.status === 'pending';
       const downloadUrl = getSafeDownloadUrl(invoice.download_url);
-      return [
-        '<div style="padding:16px 0;border-bottom:1px solid var(--border-light);">',
-        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;">',
-        '<div>',
-        '<div style="font-size:0.95rem;font-weight:600;">', core.escapeHtml(invoice.title), '</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);margin-top:4px;">订单号：',
-        core.escapeHtml(invoice.order_no), ' · ',
-        core.escapeHtml(invoice.invoice_type_label || getInvoiceTypeLabel(invoice.invoice_type)), ' · ￥',
-        Number(invoice.amount || 0).toFixed(2),
-        '</div>',
-        '</div>',
-        '<span class="badge ', core.escapeHtml(meta.cls), '">', core.escapeHtml(meta.label), '</span>',
-        '</div>',
-        '<div style="font-size:0.8125rem;color:var(--text-secondary);margin-bottom:6px;">申请时间：', core.escapeHtml(new Date(invoice.created_at).toLocaleString('zh-CN')), '</div>',
-        invoice.invoice_no
-          ? '<div style="font-size:0.8125rem;color:var(--text-secondary);margin-bottom:6px;">发票号：' + core.escapeHtml(invoice.invoice_no) + '</div>'
-          : '',
-        invoice.admin_note
-          ? '<div style="font-size:0.8125rem;color:var(--text-secondary);margin-bottom:6px;">处理备注：' + core.escapeHtml(invoice.admin_note) + '</div>'
-          : '',
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">',
-        downloadUrl
-          ? '<a class="btn btn-secondary" href="' + core.escapeHtml(downloadUrl) + '" target="_blank" rel="noopener" style="padding:6px 14px;font-size:0.8125rem;">下载发票</a>'
-          : '',
-        canCancel
-          ? '<button class="btn btn-secondary" type="button" data-invoice-cancel-id="' + core.escapeHtml(invoice.id) + '" style="padding:6px 14px;font-size:0.8125rem;">取消申请</button>'
-          : '',
-        '</div>',
-        '</div>',
-      ].join('');
-    }).join('');
+
+      const item = document.createElement('div');
+      item.style.cssText = 'padding:16px 0;border-bottom:1px solid var(--border-light);';
+
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;';
+
+      const info = document.createElement('div');
+
+      const title = document.createElement('div');
+      title.style.fontSize = '0.95rem';
+      title.style.fontWeight = '600';
+      setText(title, sanitize(invoice.title));
+      info.appendChild(title);
+
+      const details = document.createElement('div');
+      details.style.fontSize = '0.8125rem';
+      details.style.color = 'var(--text-secondary)';
+      details.style.marginTop = '4px';
+      setText(details, '订单号：' + sanitize(invoice.order_no) + ' · ' + sanitize(invoice.invoice_type_label || getInvoiceTypeLabel(invoice.invoice_type)) + ' · ￥' + Number(invoice.amount || 0).toFixed(2));
+      info.appendChild(details);
+
+      header.appendChild(info);
+
+      const statusBadge = document.createElement('span');
+      statusBadge.className = 'badge ' + sanitize(meta.cls);
+      setText(statusBadge, sanitize(meta.label));
+      header.appendChild(statusBadge);
+
+      item.appendChild(header);
+
+      const applyTime = document.createElement('div');
+      applyTime.style.fontSize = '0.8125rem';
+      applyTime.style.color = 'var(--text-secondary)';
+      applyTime.style.marginBottom = '6px';
+      setText(applyTime, '申请时间：' + sanitize(new Date(invoice.created_at).toLocaleString('zh-CN')));
+      item.appendChild(applyTime);
+
+      if (invoice.invoice_no) {
+        const invoiceNo = document.createElement('div');
+        invoiceNo.style.fontSize = '0.8125rem';
+        invoiceNo.style.color = 'var(--text-secondary)';
+        invoiceNo.style.marginBottom = '6px';
+        setText(invoiceNo, '发票号：' + sanitize(invoice.invoice_no));
+        item.appendChild(invoiceNo);
+      }
+
+      if (invoice.admin_note) {
+        const adminNote = document.createElement('div');
+        adminNote.style.fontSize = '0.8125rem';
+        adminNote.style.color = 'var(--text-secondary)';
+        adminNote.style.marginBottom = '6px';
+        setText(adminNote, '处理备注：' + sanitize(invoice.admin_note));
+        item.appendChild(adminNote);
+      }
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;';
+
+      if (downloadUrl) {
+        const downloadLink = document.createElement('a');
+        downloadLink.className = 'btn btn-secondary';
+        downloadLink.href = downloadUrl;
+        downloadLink.target = '_blank';
+        downloadLink.rel = 'noopener';
+        downloadLink.style.cssText = 'padding:6px 14px;font-size:0.8125rem;';
+        downloadLink.textContent = '下载发票';
+        actions.appendChild(downloadLink);
+      }
+
+      if (canCancel) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-secondary';
+        cancelBtn.type = 'button';
+        cancelBtn.dataset.invoiceCancelId = invoice.id;
+        cancelBtn.style.cssText = 'padding:6px 14px;font-size:0.8125rem;';
+        cancelBtn.textContent = '取消申请';
+        actions.appendChild(cancelBtn);
+      }
+
+      item.appendChild(actions);
+      container.appendChild(item);
+    });
   }
 
   async function submitInvoiceRequest() {

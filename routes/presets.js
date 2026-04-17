@@ -4,6 +4,7 @@
 const express = require('express');
 const { db, logActivity } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { validate, rules } = require('../middleware/validator');
 const { cached, invalidate } = require('../middleware/cache');
 
 const router = express.Router();
@@ -31,14 +32,11 @@ router.get('/', cached(600), (req, res) => {
   );
 });
 
-router.post('/', (req, res) => {
+router.post('/', validate([rules.presetName]), (req, res) => {
   const { name, description, shader_settings, resource_packs } = req.body;
 
-  if (!name || name.trim().length === 0) {
-    return res.status(400).json({ error: '预设名称不能为空' });
-  }
-  if (name.length > 50) {
-    return res.status(400).json({ error: '预设名称不能超过 50 个字符' });
+  if (description && description.length > 500) {
+    return res.status(400).json({ error: '预设描述不能超过 500 个字符' });
   }
 
   db.run(
